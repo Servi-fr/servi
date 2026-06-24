@@ -9,6 +9,7 @@ import {
   proPlanning as seedPlanning,
   type Provider,
 } from './data';
+import { config } from './config';
 
 const nowISO = () => new Date().toISOString();
 const genId = (p: string) => p + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
@@ -103,7 +104,8 @@ async function fetchLive(): Promise<Provider[]> {
 
 export async function getProviders(): Promise<Provider[]> {
   const live = await fetchLive();
-  if (live.length === 0) return seedProviders;
+  if (live.length === 0) return config.useSeedFallback ? seedProviders : [];
+  if (!config.useSeedFallback) return live;
   const liveCats = new Set(live.map((p) => p.category));
   const fill = seedProviders.filter((p) => !liveCats.has(p.category));
   return [...live, ...fill];
@@ -112,7 +114,8 @@ export async function getProviders(): Promise<Provider[]> {
 export async function getProvidersByCategory(slug: string): Promise<Provider[]> {
   const all = await getProviders();
   const list = all.filter((p) => p.category === slug);
-  return list.length ? list : seedProviders.filter((p) => p.category === slug);
+  if (list.length) return list;
+  return config.useSeedFallback ? seedProviders.filter((p) => p.category === slug) : [];
 }
 
 export async function getProviderById(id: string): Promise<Provider | undefined> {

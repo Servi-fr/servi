@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { LogOut, CalendarDays, CreditCard, Heart, ChevronRight, ArrowLeftRight, type LucideIcon } from 'lucide-react-native';
+import { LogOut, CalendarDays, CreditCard, Heart, ChevronRight, ArrowLeftRight, FileText, type LucideIcon } from 'lucide-react-native';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '../../lib/supabase';
 import { colors, font } from '../../theme/colors';
@@ -12,6 +12,7 @@ const items: { label: string; Icon: LucideIcon; route?: string }[] = [
   { label: 'Mes réservations', Icon: CalendarDays, route: '/bookings' },
   { label: 'Paiements', Icon: CreditCard },
   { label: 'Favoris', Icon: Heart },
+  { label: 'Légal & confidentialité', Icon: FileText, route: '/legal' },
 ];
 
 export default function Profile() {

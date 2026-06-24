@@ -12,6 +12,7 @@ import {
   ArrowLeftRight,
   LogOut,
   ChevronRight,
+  FileText,
   type LucideIcon,
 } from 'lucide-react-native';
 import { supabase } from '../../lib/supabase';
@@ -47,6 +48,7 @@ export default function ProProfile() {
     { label: 'Mon profil', Icon: Settings, route: '/profile-edit' },
     { label: 'Paiements & virements', Icon: CreditCard },
     { label: 'Aide & support', Icon: HelpCircle },
+    { label: 'Légal & confidentialité', Icon: FileText, route: '/legal' },
   ];
 
   return (

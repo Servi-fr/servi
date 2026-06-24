@@ -17,6 +17,8 @@ import { ScreenHeader } from '../../components/ScreenHeader';
 import { colors, font } from '../../theme/colors';
 import { getProvider as seedProvider, initials, type Provider } from '../../lib/data';
 import { createBooking, getProviderById } from '../../lib/api';
+import { config } from '../../lib/config';
+import { payForBooking } from '../../lib/payments';
 
 const WD = ['Dim.', 'Lun.', 'Mar.', 'Mer.', 'Jeu.', 'Ven.', 'Sam.'];
 const SLOTS = ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00'];
@@ -92,7 +94,7 @@ export default function ReservationScreen() {
     const [h, m] = (slot as string).split(':').map(Number);
     d.setHours(h, m, 0, 0);
     // Persiste en base (best-effort, ne bloque pas le parcours).
-    await createBooking({
+    const result = await createBooking({
       prestataireId: p.id,
       service: svc.label,
       dateISO: d.toISOString(),
@@ -100,6 +102,10 @@ export default function ReservationScreen() {
       price: svc.price,
       commission: fee,
     });
+    // Paiement en ligne si activé (Stripe Checkout).
+    if (config.paymentsEnabled && result.ok && result.id) {
+      await payForBooking(result.id);
+    }
     router.replace({
       pathname: '/reservation/success',
       params: {
