@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { Search } from 'lucide-react-native';
 import { Logo } from '../../components/Logo';
 import { colors, font } from '../../theme/colors';
-import { categories } from '../../lib/data';
+import { families } from '../../lib/data';
 
 export default function Home() {
   const router = useRouter();
@@ -26,17 +26,19 @@ export default function Home() {
         </Pressable>
 
         <View style={s.rowBetween}>
-          <Text style={s.section}>Services populaires</Text>
+          <Text style={s.section}>Explorez par famille</Text>
         </View>
 
         <View style={s.grid}>
-          {categories.map(({ slug, name, Icon, count }) => (
-            <Pressable key={slug} style={s.card} onPress={() => router.push(`/category/${slug}`)}>
+          {families.map((f) => (
+            <Pressable key={f.slug} style={s.card} onPress={() => router.push(`/family/${f.slug}`)}>
               <View style={s.iconBox}>
-                <Icon size={24} color={colors.link} />
+                <f.Icon size={24} color={colors.link} />
               </View>
-              <Text style={s.cardTitle}>{name}</Text>
-              <Text style={s.cardCount}>{count} pros</Text>
+              <Text style={s.cardTitle}>{f.name}</Text>
+              <Text style={s.cardCount}>
+                {f.categories.length} service{f.categories.length > 1 ? 's' : ''}
+              </Text>
             </Pressable>
           ))}
         </View>

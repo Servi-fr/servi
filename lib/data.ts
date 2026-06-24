@@ -9,6 +9,8 @@ import {
   GraduationCap,
   Scissors,
   Hammer,
+  Home,
+  HeartHandshake,
   type LucideIcon,
 } from 'lucide-react-native';
 
@@ -31,6 +33,29 @@ export const categories: Category[] = [
   { slug: 'beaute', name: 'Beauté', desc: 'Coiffure, soins à domicile', Icon: Scissors, price: 35, count: 260 },
   { slug: 'bricolage', name: 'Bricolage', desc: 'Montage, réparations', Icon: Hammer, price: 38, count: 300 },
 ];
+
+// Familles : regroupent les catégories pour la navigation (Accueil & Services).
+export type Family = {
+  slug: string;
+  name: string;
+  tagline: string;
+  Icon: LucideIcon;
+  categories: string[]; // slugs de catégories
+};
+
+export const families: Family[] = [
+  { slug: 'maison', name: 'Maison & jardin', tagline: 'Entretien, ménage, extérieurs', Icon: Home, categories: ['menage', 'jardinage'] },
+  { slug: 'travaux', name: 'Travaux & réparations', tagline: 'Plomberie, électricité, bricolage', Icon: Wrench, categories: ['plomberie', 'electricite', 'bricolage'] },
+  { slug: 'bien-etre', name: 'Beauté & bien-être', tagline: 'Coiffure, soins, coaching', Icon: HeartHandshake, categories: ['beaute', 'coaching'] },
+  { slug: 'apprentissage', name: 'Cours & soutien', tagline: 'Scolaire, langues, méthodo', Icon: GraduationCap, categories: ['cours'] },
+];
+
+export const getFamily = (slug?: string) => families.find((f) => f.slug === slug);
+export const familyCategories = (slug?: string) => {
+  const f = getFamily(slug);
+  if (!f) return [];
+  return categories.filter((c) => f.categories.includes(c.slug));
+};
 
 export type Service = { label: string; price: number; unit: string };
 
