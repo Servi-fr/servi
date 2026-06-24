@@ -62,7 +62,12 @@ async function fetchLive(): Promise<Provider[]> {
         'id,userId,service,hourlyRate,description,skills,rating,zone,User(name,image,firstName,lastName,address)',
       );
     if (error || !data || data.length === 0) return [];
-    return (data as unknown as ProfileRow[]).map(mapRow);
+    return (data as unknown as ProfileRow[])
+      // Ignore les fiches incomplètes (sans nom, sans service réel ou sans tarif).
+      .filter(
+        (r) => r.User && r.service && r.service !== 'À définir' && (r.hourlyRate ?? 0) > 0,
+      )
+      .map(mapRow);
   } catch {
     return [];
   }
