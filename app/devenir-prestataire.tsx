@@ -16,6 +16,8 @@ export default function DevenirPrestataire() {
   const [service, setService] = useState(categories[0].name);
   const [rate, setRate] = useState('');
   const [zone, setZone] = useState('');
+  const [radius, setRadius] = useState(10);
+  const [certifications, setCertifications] = useState('');
   const [description, setDescription] = useState('');
 
   useEffect(() => {
@@ -25,6 +27,8 @@ export default function DevenirPrestataire() {
         setService(p.service);
         setRate(String(p.hourlyRate ?? ''));
         setZone(p.zone ?? '');
+        setRadius(p.radiusKm ?? 10);
+        setCertifications(p.certifications ?? '');
         setDescription(p.description ?? '');
       }
       setLoading(false);
@@ -32,12 +36,19 @@ export default function DevenirPrestataire() {
   }, []);
 
   const rateNum = parseInt(rate, 10);
-  const ready = service.length > 0 && rateNum > 0;
+  const ready = service.length > 0 && rateNum > 0 && zone.trim().length > 1;
 
   async function save() {
     if (!ready) return;
     setSaving(true);
-    const r = await upsertMyProviderProfile({ service, hourlyRate: rateNum, description, zone });
+    const r = await upsertMyProviderProfile({
+      service,
+      hourlyRate: rateNum,
+      description,
+      zone: zone.trim(),
+      radiusKm: radius,
+      certifications: certifications.trim(),
+    });
     setSaving(false);
     if (!r.ok) {
       Alert.alert('Erreur', "Impossible d'enregistrer le profil prestataire.");
@@ -85,13 +96,35 @@ export default function DevenirPrestataire() {
               style={s.input}
             />
 
-            <Text style={s.label}>Zone d'intervention</Text>
+            <Text style={s.label}>Ville d'intervention</Text>
             <TextInput
               value={zone}
               onChangeText={setZone}
-              placeholder="Paris et proche banlieue"
+              placeholder="Paris 11e"
               placeholderTextColor={colors.faint}
               style={s.input}
+            />
+
+            <Text style={s.label}>Rayon d'intervention</Text>
+            <View style={s.chips}>
+              {[5, 10, 15, 25, 50].map((km) => {
+                const active = km === radius;
+                return (
+                  <Pressable key={km} style={[s.chip, active && s.chipOn]} onPress={() => setRadius(km)}>
+                    <Text style={[s.chipText, active && s.chipTextOn]}>{km} km</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <Text style={s.label}>Diplômes & certifications</Text>
+            <TextInput
+              value={certifications}
+              onChangeText={setCertifications}
+              placeholder={'Un par ligne, ex. :\nCAP Électricité\nHabilitation B1V\nCertifié Qualifelec'}
+              placeholderTextColor={colors.faint}
+              multiline
+              style={s.textarea}
             />
 
             <Text style={s.label}>Description</Text>

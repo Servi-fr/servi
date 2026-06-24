@@ -46,6 +46,8 @@ export type Provider = {
   verified: boolean;
   bio: string;
   services: Service[];
+  radiusKm?: number; // rayon d'intervention autour de la ville
+  certifications?: string[]; // diplômes / certifications
 };
 
 export const providers: Provider[] = [

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Star, MapPin, BadgeCheck, Check } from 'lucide-react-native';
+import { Star, MapPin, BadgeCheck, Check, Award } from 'lucide-react-native';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { colors, font } from '../../theme/colors';
 import { getProvider as seedProvider, getCategory, sampleReviews, initials, type Provider } from '../../lib/data';
@@ -77,7 +77,10 @@ export default function ProviderScreen() {
             <Text style={s.rating}>{p.rating.toFixed(1)}</Text>
             <Text style={s.reviews}>· {p.reviews} avis</Text>
             <MapPin size={14} color={colors.faint} style={{ marginLeft: 8 }} />
-            <Text style={s.city}>{p.city}</Text>
+            <Text style={s.city}>
+              {p.city}
+              {p.radiusKm ? ` · ${p.radiusKm} km` : ''}
+            </Text>
           </View>
         </View>
 
@@ -108,6 +111,33 @@ export default function ProviderScreen() {
               </Text>
             </View>
           ))}
+        </View>
+
+        {/* Diplômes & certifications */}
+        {p.certifications && p.certifications.length > 0 && (
+          <>
+            <Text style={s.section}>Diplômes & certifications</Text>
+            <View style={s.certWrap}>
+              {p.certifications.map((c, i) => (
+                <View key={c + i} style={s.certChip}>
+                  <Award size={14} color={colors.link} />
+                  <Text style={s.certText}>{c}</Text>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
+
+        {/* Zone d'intervention */}
+        <Text style={s.section}>Zone d'intervention</Text>
+        <View style={s.zoneCard}>
+          <View style={s.svcCheck}>
+            <MapPin size={14} color={colors.link} />
+          </View>
+          <Text style={s.zoneText}>
+            {p.city || 'Zone non précisée'}
+            {p.radiusKm ? ` — intervient dans un rayon de ${p.radiusKm} km` : ''}
+          </Text>
         </View>
 
         {/* Avis */}
@@ -198,6 +228,12 @@ const s = StyleSheet.create({
   svcLabel: { flex: 1, fontFamily: font.medium, fontSize: 15, color: colors.ink },
   svcPrice: { fontFamily: font.semi, fontSize: 15, color: colors.ink },
   svcUnit: { fontFamily: font.body, fontSize: 12.5, color: colors.faint },
+
+  certWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  certChip: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line3, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
+  certText: { fontFamily: font.medium, fontSize: 13, color: colors.ink },
+  zoneCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 16, padding: 16 },
+  zoneText: { flex: 1, fontFamily: font.medium, fontSize: 14, color: colors.ink, lineHeight: 20 },
 
   reviewHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   reviewScore: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 14 },

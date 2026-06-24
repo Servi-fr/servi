@@ -63,7 +63,10 @@ export default function CategoryScreen() {
                     <Text style={s.rating}>{p.rating.toFixed(1)}</Text>
                     <Text style={s.reviews}>({p.reviews})</Text>
                     <MapPin size={13} color={colors.faint} style={{ marginLeft: 6 }} />
-                    <Text style={s.city} numberOfLines={1}>{p.city}</Text>
+                    <Text style={s.city} numberOfLines={1}>
+                      {p.city}
+                      {p.radiusKm ? ` · ${p.radiusKm} km` : ''}
+                    </Text>
                   </View>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>

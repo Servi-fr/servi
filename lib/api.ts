@@ -30,6 +30,8 @@ type ProfileRow = {
   skills: string[] | null;
   rating: number | null;
   zone: string | null;
+  radiusKm: number | null;
+  certifications: string | null;
   User: {
     name: string | null;
     firstName: string | null;
@@ -52,6 +54,15 @@ function fullName(u: ProfileRow['User']): string {
   return u.name || [u.firstName, u.lastName].filter(Boolean).join(' ') || 'Prestataire SERVI';
 }
 
+// Découpe le texte des certifications (une par ligne ou séparées par ;) en liste.
+export function parseCertifications(s: string | null | undefined): string[] {
+  if (!s) return [];
+  return s
+    .split(/[\n;]+/)
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
 function mapRow(r: ProfileRow): Provider {
   return {
     id: r.userId,
@@ -65,14 +76,22 @@ function mapRow(r: ProfileRow): Provider {
     verified: true,
     bio: r.description || '',
     services: [{ label: r.service || 'Prestation', price: Math.round(r.hourlyRate ?? 0), unit: '/ h' }],
+    radiusKm: r.radiusKm ?? undefined,
+    certifications: parseCertifications(r.certifications),
   };
 }
 
+const SELECT_FULL =
+  'id,userId,service,hourlyRate,description,skills,rating,zone,radiusKm,certifications,User(name,firstName,lastName,address)';
+const SELECT_BASE =
+  'id,userId,service,hourlyRate,description,skills,rating,zone,User(name,firstName,lastName,address)';
+
 async function fetchLive(): Promise<Provider[]> {
   try {
-    const { data, error } = await supabase
-      .from('PrestataireProfile')
-      .select('id,userId,service,hourlyRate,description,skills,rating,zone,User(name,firstName,lastName,address)');
+    let res = await supabase.from('PrestataireProfile').select(SELECT_FULL);
+    // Repli si les colonnes radiusKm/certifications ne sont pas encore en base.
+    if (res.error) res = await supabase.from('PrestataireProfile').select(SELECT_BASE);
+    const { data, error } = res;
     if (error || !data || data.length === 0) return [];
     return (data as unknown as ProfileRow[])
       .filter((r) => r.User && r.service && r.service !== 'À définir' && (r.hourlyRate ?? 0) > 0)
@@ -152,6 +171,8 @@ export type ProviderProfile = {
   hourlyRate: number;
   description: string | null;
   zone: string | null;
+  radiusKm: number | null;
+  certifications: string | null;
   skills: string[] | null;
   rating: number | null;
 };
@@ -162,7 +183,7 @@ export async function getMyProviderProfile(): Promise<ProviderProfile | null> {
   try {
     const { data } = await supabase
       .from('PrestataireProfile')
-      .select('id,service,hourlyRate,description,zone,skills,rating')
+      .select('id,service,hourlyRate,description,zone,radiusKm,certifications,skills,rating')
       .eq('userId', uid)
       .maybeSingle();
     return (data as ProviderProfile) ?? null;
@@ -176,6 +197,8 @@ export async function upsertMyProviderProfile(p: {
   hourlyRate: number;
   description?: string;
   zone?: string;
+  radiusKm?: number;
+  certifications?: string;
 }): Promise<{ ok: boolean; error?: string }> {
   const uid = await getUid();
   if (!uid) return { ok: false, error: 'not-auth' };
@@ -188,6 +211,8 @@ export async function upsertMyProviderProfile(p: {
         hourlyRate: p.hourlyRate,
         description: p.description ?? null,
         zone: p.zone ?? null,
+        radiusKm: p.radiusKm ?? null,
+        certifications: p.certifications ?? null,
       })
       .eq('userId', uid);
     if (error) return { ok: false, error: error.message };
@@ -199,6 +224,8 @@ export async function upsertMyProviderProfile(p: {
       hourlyRate: p.hourlyRate,
       description: p.description ?? null,
       zone: p.zone ?? null,
+      radiusKm: p.radiusKm ?? null,
+      certifications: p.certifications ?? null,
       skills: [],
       totalEarned: 0,
       rating: 0,

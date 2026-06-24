@@ -17,6 +17,12 @@ from auth.users u
 on conflict (id) do nothing;
 
 -- ------------------------------------------------------------
+-- 1b) Nouvelle colonne : rayon d'intervention (km).
+--     (« certifications » et « skills » existent déjà dans le schéma.)
+-- ------------------------------------------------------------
+alter table public."PrestataireProfile" add column if not exists "radiusKm" integer default 10;
+
+-- ------------------------------------------------------------
 -- 2) Droits (grants) pour les rôles anon / authenticated
 -- ------------------------------------------------------------
 grant usage on schema public to anon, authenticated;
@@ -141,6 +147,21 @@ insert into public."PrestataireProfile" (id, "userId", service, "hourlyRate", de
   ('pp-beaute-1','demo-beaute-1','Beauté',35,'Coiffeuse professionnelle : coupe, couleur, coiffure événementielle à domicile.', array['Coupe','Couleur','Mariage'],4.9,'Paris 16e'),
   ('pp-bricolage-1','demo-bricolage-1','Bricolage',38,'Homme toutes mains : montage de meubles, fixations, petites réparations.', array['Montage','Réparations','Pose'],4.8,'Paris 20e')
 on conflict (id) do nothing;
+
+-- Rayons d'intervention + diplômes/certifications des prestataires de démo
+update public."PrestataireProfile" set "radiusKm" = 15, certifications =
+  case id
+    when 'pp-menage-1'     then E'CléanPro niveau 2\nFormation produits écologiques'
+    when 'pp-jardinage-1'  then E'BP Aménagements paysagers\nCertiphyto'
+    when 'pp-plomberie-1'  then E'CAP Installateur sanitaire\nHabilitation gaz PGN/PGP'
+    when 'pp-electricite-1' then E'CAP Électricien\nHabilitation B1V-BR\nQualifelec'
+    when 'pp-coaching-1'   then E'BPJEPS Activités de la forme\nPSC1'
+    when 'pp-cours-1'      then E'Agrégation de mathématiques\nMaster MEEF'
+    when 'pp-beaute-1'     then E'CAP Coiffure\nBP Coiffure'
+    when 'pp-bricolage-1'  then E'CAP Menuiserie\nSST'
+    else certifications
+  end
+where id like 'pp-%';
 
 -- ------------------------------------------------------------
 -- 5) (Optionnel) Retirer les prestataires de démonstration :
