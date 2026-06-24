@@ -333,6 +333,27 @@ export const seedProPlanning = seedPlanning;
 // ============================================================
 export type Review = { author: string; rating: number; date: string; text: string };
 
+export async function getReviewsForProvider(userId: string): Promise<Review[]> {
+  if (!userId || userId.startsWith('p-')) return [];
+  try {
+    const { data } = await supabase
+      .from('Review')
+      .select('rating,comment,createdAt,fromUser:User!Review_fromUserId_fkey(name)')
+      .eq('toUserId', userId)
+      .order('createdAt', { ascending: false })
+      .limit(10);
+    if (!data) return [];
+    return (data as any[]).map((r) => ({
+      author: r.fromUser?.name ?? 'Client',
+      rating: r.rating,
+      date: formatShortDate(r.createdAt),
+      text: r.comment ?? '',
+    }));
+  } catch {
+    return [];
+  }
+}
+
 export async function createReview(input: {
   bookingId: string;
   toUserId: string;
@@ -425,4 +446,9 @@ export function formatDate(iso: string): string {
   const hh = d.getHours().toString().padStart(2, '0');
   const mm = d.getMinutes().toString().padStart(2, '0');
   return `${WD[d.getDay()]} ${d.getDate()} ${MO[d.getMonth()]} · ${hh}:${mm}`;
+}
+
+export function formatShortDate(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getDate()} ${MO[d.getMonth()]}`;
 }

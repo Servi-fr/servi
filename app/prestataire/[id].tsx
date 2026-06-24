@@ -6,19 +6,27 @@ import { Star, MapPin, BadgeCheck, Check } from 'lucide-react-native';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { colors, font } from '../../theme/colors';
 import { getProvider as seedProvider, getCategory, sampleReviews, initials, type Provider } from '../../lib/data';
-import { getProviderById } from '../../lib/api';
+import { getProviderById, getReviewsForProvider } from '../../lib/api';
 
 export default function ProviderScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [p, setP] = useState<Provider | undefined>(() => seedProvider(id));
   const [loading, setLoading] = useState(!p);
+  const [reviews, setReviews] = useState(sampleReviews);
+  const [hasRealReviews, setHasRealReviews] = useState(false);
   useEffect(() => {
     let active = true;
     getProviderById(id).then((r) => {
       if (!active) return;
       if (r) setP(r);
       setLoading(false);
+    });
+    getReviewsForProvider(id).then((rv) => {
+      if (active && rv.length > 0) {
+        setReviews(rv);
+        setHasRealReviews(true);
+      }
     });
     return () => {
       active = false;
@@ -104,15 +112,15 @@ export default function ProviderScreen() {
 
         {/* Avis */}
         <View style={s.reviewHead}>
-          <Text style={s.section}>Avis ({p.reviews})</Text>
+          <Text style={s.section}>Avis ({hasRealReviews ? reviews.length : p.reviews})</Text>
           <View style={s.reviewScore}>
             <Star size={14} color={colors.star} fill={colors.star} />
             <Text style={s.reviewScoreText}>{p.rating.toFixed(1)}</Text>
           </View>
         </View>
         <View style={{ gap: 10 }}>
-          {sampleReviews.map((r) => (
-            <View key={r.author} style={s.reviewCard}>
+          {reviews.map((r, ri) => (
+            <View key={r.author + ri} style={s.reviewCard}>
               <View style={s.reviewTop}>
                 <View style={s.reviewAvatar}>
                   <Text style={s.reviewInitials}>{initials(r.author)}</Text>
