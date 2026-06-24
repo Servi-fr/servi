@@ -42,6 +42,21 @@ Copier `.env.example` → `.env` et renseigner :
 - `EXPO_PUBLIC_SUPABASE_ANON_KEY` (clé publishable/anon — publique)
 *(des valeurs par défaut sont aussi codées en repli dans `lib/supabase.ts`.)*
 
+## Backend Supabase (données réelles)
+Le back est **le même que le web** (projet `sugovioteynfkxbkkzdy`, tables Prisma `User`,
+`PrestataireProfile`, `Booking`…). Rappel clé : `public."User".id == auth.users.id`
+(trigger) → `clientId` d'une réservation = `session.user.id`.
+
+- `lib/api.ts` — lit `PrestataireProfile` (+ `User`) et **écrit les réservations** (`Booking`).
+  Repli automatique sur le catalogue local (`lib/data.ts`) quand la base est vide.
+- Les écrans `category` / `prestataire` / `reservation` consomment `lib/api.ts`.
+
+**Étape unique pour activer les données réelles** (1 fois) :
+1. Supabase → SQL Editor → coller le contenu de [`supabase/mobile-setup.sql`](supabase/mobile-setup.sql) → **Run**.
+2. Ce script : backfill des comptes `auth → User`, politiques **RLS** (catalogue public en lecture,
+   réservation par l'utilisateur connecté) et **8 prestataires de démo** (réversibles).
+→ L'app affiche alors les prestataires **en base** et les réservations **persistent** réellement.
+
 ## Builds pour les stores (EAS Build — cloud Expo)
 ```bash
 npm i -g eas-cli

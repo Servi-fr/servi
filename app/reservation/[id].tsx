@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -8,13 +8,15 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Check, MapPin } from 'lucide-react-native';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { colors, font } from '../../theme/colors';
-import { getProvider, initials } from '../../lib/data';
+import { getProvider as seedProvider, initials, type Provider } from '../../lib/data';
+import { createBooking, getProviderById } from '../../lib/api';
 
 const WD = ['Dim.', 'Lun.', 'Mar.', 'Mer.', 'Jeu.', 'Ven.', 'Sam.'];
 const SLOTS = ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00'];
@@ -23,7 +25,19 @@ const FEE_RATE = 0.1; // frais de service SERVI
 export default function ReservationScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const p = getProvider(id);
+  const [p, setP] = useState<Provider | undefined>(() => seedProvider(id));
+  const [loadingP, setLoadingP] = useState(!p);
+  useEffect(() => {
+    let active = true;
+    getProviderById(id).then((r) => {
+      if (!active) return;
+      if (r) setP(r);
+      setLoadingP(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [id]);
 
   const days = useMemo(
     () =>
@@ -40,6 +54,18 @@ export default function ReservationScreen() {
   const [slot, setSlot] = useState<string | null>(null);
   const [address, setAddress] = useState('');
   const [notes, setNotes] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  if (loadingP && !p) {
+    return (
+      <SafeAreaView style={s.safe} edges={['top']}>
+        <ScreenHeader title="Réservation" />
+        <View style={s.center}>
+          <ActivityIndicator color={colors.link} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!p) {
     return (
@@ -58,8 +84,22 @@ export default function ReservationScreen() {
   const ready = slot !== null && address.trim().length > 3;
   const chosenDay = days[dayIdx];
 
-  function confirm() {
-    if (!ready || !p) return;
+  async function confirm() {
+    if (!ready || !p || submitting) return;
+    setSubmitting(true);
+    const d = new Date();
+    d.setDate(d.getDate() + dayIdx);
+    const [h, m] = (slot as string).split(':').map(Number);
+    d.setHours(h, m, 0, 0);
+    // Persiste en base (best-effort, ne bloque pas le parcours).
+    await createBooking({
+      prestataireId: p.id,
+      service: svc.label,
+      dateISO: d.toISOString(),
+      durationMin: 60,
+      price: svc.price,
+      commission: fee,
+    });
     router.replace({
       pathname: '/reservation/success',
       params: {
@@ -171,10 +211,18 @@ export default function ReservationScreen() {
 
         {/* CTA */}
         <View style={s.ctaBar}>
-          <Pressable style={[s.ctaBtn, !ready && s.ctaBtnOff]} disabled={!ready} onPress={confirm}>
-            <Text style={s.ctaBtnText}>
-              {ready ? `Confirmer · ${total} €` : 'Choisissez un créneau et une adresse'}
-            </Text>
+          <Pressable
+            style={[s.ctaBtn, (!ready || submitting) && s.ctaBtnOff]}
+            disabled={!ready || submitting}
+            onPress={confirm}
+          >
+            {submitting ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={s.ctaBtnText}>
+                {ready ? `Confirmer · ${total} €` : 'Choisissez un créneau et une adresse'}
+              </Text>
+            )}
           </Pressable>
         </View>
       </KeyboardAvoidingView>

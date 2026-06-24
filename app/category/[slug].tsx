@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -5,12 +6,23 @@ import { Star, MapPin, BadgeCheck, ChevronRight, SearchX } from 'lucide-react-na
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { colors, font } from '../../theme/colors';
 import { getCategory, providersByCategory, initials } from '../../lib/data';
+import { getProvidersByCategory } from '../../lib/api';
 
 export default function CategoryScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const router = useRouter();
   const category = getCategory(slug);
-  const list = providersByCategory(slug);
+  // Affiche le catalogue local instantanément, puis remplace par les pros en base.
+  const [list, setList] = useState(() => providersByCategory(slug));
+  useEffect(() => {
+    let active = true;
+    getProvidersByCategory(slug).then((r) => {
+      if (active && r.length) setList(r);
+    });
+    return () => {
+      active = false;
+    };
+  }, [slug]);
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>

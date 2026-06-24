@@ -1,15 +1,40 @@
-import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { useEffect, useState } from 'react';
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Star, MapPin, BadgeCheck, Check } from 'lucide-react-native';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { colors, font } from '../../theme/colors';
-import { getProvider, getCategory, sampleReviews, initials } from '../../lib/data';
+import { getProvider as seedProvider, getCategory, sampleReviews, initials, type Provider } from '../../lib/data';
+import { getProviderById } from '../../lib/api';
 
 export default function ProviderScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const p = getProvider(id);
+  const [p, setP] = useState<Provider | undefined>(() => seedProvider(id));
+  const [loading, setLoading] = useState(!p);
+  useEffect(() => {
+    let active = true;
+    getProviderById(id).then((r) => {
+      if (!active) return;
+      if (r) setP(r);
+      setLoading(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
+  if (loading && !p) {
+    return (
+      <SafeAreaView style={s.safe} edges={['top']}>
+        <ScreenHeader title="Prestataire" />
+        <View style={s.notFound}>
+          <ActivityIndicator color={colors.link} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!p) {
     return (
