@@ -123,6 +123,19 @@ create policy "servi_message_insert" on public."Message"
             where r.id = public."Message"."chatRoomId"
               and (b."clientId" = auth.uid()::text or b."prestataireId" = auth.uid()::text)));
 
+-- — Fonction : ce créneau est-il déjà pris ? (SECURITY DEFINER → ne renvoie qu'un booléen,
+--   ne fuite aucune réservation d'autrui) —
+create or replace function public.servi_slot_taken(p_prestataire text, p_date timestamptz)
+returns boolean language sql security definer set search_path = public as $$
+  select exists (
+    select 1 from public."Booking"
+    where "prestataireId" = p_prestataire
+      and date = p_date
+      and status in ('PENDING', 'CONFIRMED')
+  );
+$$;
+grant execute on function public.servi_slot_taken(text, timestamptz) to anon, authenticated;
+
 -- ------------------------------------------------------------
 -- 4) Prestataires de démonstration (réversibles — voir bloc 5)
 -- ------------------------------------------------------------

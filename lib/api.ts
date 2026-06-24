@@ -354,6 +354,21 @@ export async function updateBookingStatus(
   return error ? { ok: false, error: error.message } : { ok: true };
 }
 
+// Le créneau est-il déjà réservé chez ce prestataire ? (fonction SQL SECURITY DEFINER
+// → ne fuite pas les réservations d'autrui, renvoie juste un booléen.)
+export async function isSlotTaken(prestataireId: string, dateISO: string): Promise<boolean> {
+  if (prestataireId.startsWith('p-')) return false; // catalogue local de démo
+  try {
+    const { data } = await supabase.rpc('servi_slot_taken', {
+      p_prestataire: prestataireId,
+      p_date: dateISO,
+    });
+    return data === true;
+  } catch {
+    return false;
+  }
+}
+
 // Repli démo pour l'espace prestataire quand l'utilisateur n'a pas (encore) de vraies demandes.
 export const seedProRequests = seedRequests;
 export const seedProPlanning = seedPlanning;

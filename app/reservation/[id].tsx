@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -16,9 +17,10 @@ import { Check, MapPin } from 'lucide-react-native';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { colors, font } from '../../theme/colors';
 import { getProvider as seedProvider, initials, type Provider } from '../../lib/data';
-import { createBooking, getProviderById } from '../../lib/api';
+import { createBooking, getProviderById, isSlotTaken, sendMessage } from '../../lib/api';
 import { config } from '../../lib/config';
 import { payForBooking } from '../../lib/payments';
+import { checkInPerimeter } from '../../lib/geo';
 
 const WD = ['Dim.', 'Lun.', 'Mar.', 'Mer.', 'Jeu.', 'Ven.', 'Sam.'];
 const SLOTS = ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00'];
@@ -86,14 +88,17 @@ export default function ReservationScreen() {
   const ready = slot !== null && address.trim().length > 3;
   const chosenDay = days[dayIdx];
 
-  async function confirm() {
-    if (!ready || !p || submitting) return;
-    setSubmitting(true);
+  function buildDate() {
     const d = new Date();
     d.setDate(d.getDate() + dayIdx);
     const [h, m] = (slot as string).split(':').map(Number);
     d.setHours(h, m, 0, 0);
-    // Persiste en base (best-effort, ne bloque pas le parcours).
+    return d;
+  }
+
+  // Crée la réservation ; si askMessage est fourni, l'envoie au prestataire et ouvre le chat.
+  async function finalize(d: Date, askMessage?: string) {
+    if (!p) return;
     const result = await createBooking({
       prestataireId: p.id,
       service: svc.label,
@@ -102,10 +107,16 @@ export default function ReservationScreen() {
       price: svc.price,
       commission: fee,
     });
-    // Paiement en ligne si activé (Stripe Checkout).
+    if (result.ok && result.id && askMessage) {
+      await sendMessage(result.id, askMessage);
+      setSubmitting(false);
+      router.replace(`/chat/${result.id}`);
+      return;
+    }
     if (config.paymentsEnabled && result.ok && result.id) {
       await payForBooking(result.id);
     }
+    setSubmitting(false);
     router.replace({
       pathname: '/reservation/success',
       params: {
@@ -116,6 +127,48 @@ export default function ReservationScreen() {
         total: String(total),
       },
     });
+  }
+
+  async function confirm() {
+    if (!ready || !p || submitting) return;
+    setSubmitting(true);
+    const d = buildDate();
+
+    // Vérifs : l'adresse est-elle dans la zone du prestataire ? le créneau est-il libre ?
+    const [perim, taken] = await Promise.all([
+      p.city ? checkInPerimeter(address.trim(), p.city, p.radiusKm ?? 15) : Promise.resolve({ ok: true as boolean }),
+      isSlotTaken(p.id, d.toISOString()),
+    ]);
+
+    const issues: string[] = [];
+    if (perim.ok === false) {
+      issues.push(`l'adresse est à ~${(perim as any).distanceKm} km (hors de la zone de ${p.radiusKm ?? 15} km)`);
+    }
+    if (taken) issues.push('ce créneau est déjà réservé');
+
+    if (issues.length > 0) {
+      setSubmitting(false);
+      const askMessage =
+        `Bonjour, je souhaiterais réserver « ${svc.label} » le ${chosenDay.label} ${chosenDay.num} à ${slot}, ` +
+        `à l'adresse : ${address.trim()}. Est-ce que cela vous conviendrait ? (${issues.join(' ; ')})`;
+      Alert.alert(
+        'À confirmer avec le prestataire',
+        `Attention : ${issues.join(' et ')}. Voulez-vous lui envoyer une demande par message pour savoir si ça lui convient ?`,
+        [
+          { text: 'Modifier', style: 'cancel' },
+          {
+            text: 'Envoyer la demande',
+            onPress: () => {
+              setSubmitting(true);
+              finalize(d, askMessage);
+            },
+          },
+        ],
+      );
+      return;
+    }
+
+    await finalize(d);
   }
 
   return (
