@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { LogOut, CalendarDays, CreditCard, Heart, ChevronRight, type LucideIcon } from 'lucide-react-native';
+import { LogOut, CalendarDays, CreditCard, Heart, ChevronRight, ArrowLeftRight, type LucideIcon } from 'lucide-react-native';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '../../lib/supabase';
 import { colors, font } from '../../theme/colors';
@@ -60,6 +60,11 @@ export default function Profile() {
           ))}
         </View>
 
+        <Pressable style={s.switch} onPress={() => router.push('/(pro)/dashboard')}>
+          <ArrowLeftRight size={18} color={colors.proInk} />
+          <Text style={s.switchText}>Passer en mode prestataire</Text>
+        </Pressable>
+
         <Pressable onPress={logout} style={s.logout}>
           <LogOut size={18} color="#dc2626" />
           <Text style={s.logoutText}>Se déconnecter</Text>
@@ -91,6 +96,8 @@ const s = StyleSheet.create({
   menuRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 16 },
   menuBorder: { borderTopWidth: 1, borderTopColor: colors.line },
   menuLabel: { flex: 1, fontFamily: font.semi, fontSize: 15, color: colors.ink },
-  logout: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 18, paddingVertical: 14 },
+  switch: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 16, paddingVertical: 15, borderRadius: 14, borderWidth: 1, borderColor: colors.line3, backgroundColor: colors.surface },
+  switchText: { fontFamily: font.semi, fontSize: 15, color: colors.proInk },
+  logout: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 14, paddingVertical: 14 },
   logoutText: { fontFamily: font.semi, fontSize: 15, color: '#dc2626' },
 });

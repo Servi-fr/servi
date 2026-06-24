@@ -1,31 +1,12 @@
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import {
-  ChevronRight,
-  Sparkles,
-  Sprout,
-  Wrench,
-  Zap,
-  Dumbbell,
-  GraduationCap,
-  Scissors,
-  Hammer,
-  type LucideIcon,
-} from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { ChevronRight } from 'lucide-react-native';
 import { colors, font } from '../../theme/colors';
-
-const services: { name: string; desc: string; Icon: LucideIcon; price: string }[] = [
-  { name: 'Ménage', desc: 'Entretien, grand nettoyage, repassage', Icon: Sparkles, price: '25' },
-  { name: 'Jardinage', desc: 'Tonte, taille, plantation', Icon: Sprout, price: '30' },
-  { name: 'Plomberie', desc: 'Dépannage, installation', Icon: Wrench, price: '45' },
-  { name: 'Électricité', desc: 'Mise aux normes, dépannage', Icon: Zap, price: '50' },
-  { name: 'Coaching', desc: 'Sport, bien-être à domicile', Icon: Dumbbell, price: '40' },
-  { name: 'Cours particuliers', desc: 'Soutien scolaire, langues', Icon: GraduationCap, price: '28' },
-  { name: 'Beauté', desc: 'Coiffure, soins à domicile', Icon: Scissors, price: '35' },
-  { name: 'Bricolage', desc: 'Montage, réparations', Icon: Hammer, price: '38' },
-];
+import { categories } from '../../lib/data';
 
 export default function Services() {
+  const router = useRouter();
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
@@ -33,8 +14,8 @@ export default function Services() {
         <Text style={s.lead}>Choisissez une catégorie pour trouver un prestataire vérifié.</Text>
 
         <View style={{ marginTop: 18, gap: 12 }}>
-          {services.map(({ name, desc, Icon, price }) => (
-            <Pressable key={name} style={s.row}>
+          {categories.map(({ slug, name, desc, Icon, price }) => (
+            <Pressable key={slug} style={s.row} onPress={() => router.push(`/category/${slug}`)}>
               <View style={s.iconBox}>
                 <Icon size={24} color={colors.link} />
               </View>

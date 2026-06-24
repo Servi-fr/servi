@@ -1,31 +1,10 @@
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import {
-  Search,
-  Sparkles,
-  Sprout,
-  Wrench,
-  Zap,
-  Dumbbell,
-  GraduationCap,
-  Scissors,
-  Hammer,
-  type LucideIcon,
-} from 'lucide-react-native';
+import { Search } from 'lucide-react-native';
 import { Logo } from '../../components/Logo';
 import { colors, font } from '../../theme/colors';
-
-const services: { name: string; Icon: LucideIcon; count: string }[] = [
-  { name: 'Ménage', Icon: Sparkles, count: '480' },
-  { name: 'Jardinage', Icon: Sprout, count: '320' },
-  { name: 'Plomberie', Icon: Wrench, count: '210' },
-  { name: 'Électricité', Icon: Zap, count: '185' },
-  { name: 'Coaching', Icon: Dumbbell, count: '140' },
-  { name: 'Cours', Icon: GraduationCap, count: '390' },
-  { name: 'Beauté', Icon: Scissors, count: '260' },
-  { name: 'Bricolage', Icon: Hammer, count: '300' },
-];
+import { categories } from '../../lib/data';
 
 export default function Home() {
   const router = useRouter();
@@ -51,8 +30,8 @@ export default function Home() {
         </View>
 
         <View style={s.grid}>
-          {services.map(({ name, Icon, count }) => (
-            <Pressable key={name} style={s.card} onPress={() => router.push('/(tabs)/services')}>
+          {categories.map(({ slug, name, Icon, count }) => (
+            <Pressable key={slug} style={s.card} onPress={() => router.push(`/category/${slug}`)}>
               <View style={s.iconBox}>
                 <Icon size={24} color={colors.link} />
               </View>

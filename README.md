@@ -10,9 +10,23 @@ back **Supabase** que le web, dans la charte **« 01 Lumière »**.
 - Polices **Sora** + **Plus Jakarta Sans** (`@expo-google-fonts`)
 
 ## Écrans
+
+**Client (bleu)**
 - `app/index.tsx` — garde d'auth (redirige vers connexion ou onglets)
-- `app/sign-in.tsx`, `app/sign-up.tsx` — auth
+- `app/sign-in.tsx`, `app/sign-up.tsx` — auth Supabase
 - `app/(tabs)/` — Accueil, Services, Messages, Profil (tab bar native)
+- `app/category/[slug].tsx` — prestataires d'une catégorie
+- `app/prestataire/[id].tsx` — fiche (profil, stats, prestations, avis, CTA Réserver)
+- `app/reservation/[id].tsx` — formulaire (prestation, date, créneau, adresse, récap + frais SERVI)
+- `app/reservation/success.tsx` — confirmation
+
+**Prestataire (Noir & Blanc)**
+- `app/(pro)/dashboard.tsx` — revenus, KPI, demandes en attente, missions du jour
+- `app/(pro)/demandes.tsx` — accepter / refuser les réservations
+- `app/(pro)/planning.tsx` — agenda des missions confirmées
+- `app/(pro)/profile.tsx` — profil pro + bascule vers l'espace client
+
+**Données** : `lib/data.ts` (catégories, prestataires, avis, demandes) — couche locale à remplacer par des requêtes Supabase.
 
 ## Lancer en local (preview immédiate)
 ```bash
@@ -42,7 +56,8 @@ eas submit --platform android   # envoi à Google Play
 > Identifiants : iOS `com.whalesrecords.serviapp`, Android `com.whalesrecords.serviapp` (dans `app.json`).
 
 ## À faire ensuite (itérations)
-- Connexion **Google** (expo-auth-session + Supabase OAuth, avec le scheme `serviapp://`)
-- Fiche prestataire + réservation + suivi temps réel (cf. maquette `Mobile SERVI`)
-- Espace **prestataire** (N&B) + **push** natif (expo-notifications → APNs/FCM)
+- Brancher les écrans sur **Supabase** (requêtes réelles : prestataires, réservations) à la place de `lib/data.ts`
+- Connexion **Google** (expo-auth-session + Supabase OAuth, scheme `serviapp://`)
+- **Suivi temps réel** de la réservation (Supabase Realtime) + messagerie
+- **Push** natif (expo-notifications → APNs/FCM)
 - Paiement **Stripe** (@stripe/stripe-react-native)
