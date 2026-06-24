@@ -1,0 +1,235 @@
+import { useEffect, useState } from 'react';
+import { View, Text, ScrollView, Pressable, TextInput, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { CalendarDays, User, Check, X, MessageCircle, Star, Briefcase } from 'lucide-react-native';
+import { ScreenHeader } from '../../components/ScreenHeader';
+import { StatusBadge } from '../../components/StatusBadge';
+import { colors, font } from '../../theme/colors';
+import {
+  getBookingById,
+  getUid,
+  updateBookingStatus,
+  createReview,
+  formatDate,
+  type BookingRow,
+  type BookingStatus,
+} from '../../lib/api';
+
+export default function BookingDetail() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const [b, setB] = useState<BookingRow | null>(null);
+  const [uid, setUid] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+
+  // Avis
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState('');
+  const [reviewSent, setReviewSent] = useState(false);
+
+  async function load() {
+    const [bk, u] = await Promise.all([getBookingById(id), getUid()]);
+    setB(bk);
+    setUid(u);
+    setLoading(false);
+  }
+  useEffect(() => {
+    load();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={s.safe} edges={['top']}>
+        <ScreenHeader title="Réservation" />
+        <View style={s.center}>
+          <ActivityIndicator color={colors.link} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+  if (!b) {
+    return (
+      <SafeAreaView style={s.safe} edges={['top']}>
+        <ScreenHeader title="Réservation" />
+        <View style={s.center}>
+          <Text style={s.muted}>Réservation introuvable.</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const amClient = b.clientId === uid;
+  const amPro = b.prestataireId === uid;
+  const otherName = amClient ? b.prestataire?.name : b.client?.name;
+  const total = b.price + b.commission;
+
+  async function setStatus(status: BookingStatus) {
+    if (!b) return;
+    setBusy(true);
+    const r = await updateBookingStatus(b.id, status);
+    setBusy(false);
+    if (!r.ok) {
+      Alert.alert('Erreur', "L'action a échoué. Réessayez.");
+      return;
+    }
+    setB({ ...b, status });
+  }
+
+  async function submitReview() {
+    if (!b) return;
+    setBusy(true);
+    const r = await createReview({ bookingId: b.id, toUserId: b.prestataireId, rating, comment: comment.trim() });
+    setBusy(false);
+    if (!r.ok) {
+      Alert.alert('Erreur', "L'avis n'a pas pu être envoyé.");
+      return;
+    }
+    setReviewSent(true);
+  }
+
+  return (
+    <SafeAreaView style={s.safe} edges={['top']}>
+      <ScreenHeader title="Réservation" />
+      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+        <View style={s.head}>
+          <Text style={s.service}>{b.service}</Text>
+          <StatusBadge status={b.status} />
+        </View>
+
+        <View style={s.card}>
+          <Row Icon={amClient ? Briefcase : User} label={amClient ? 'Prestataire' : 'Client'} value={otherName ?? '—'} />
+          <View style={s.divider} />
+          <Row Icon={CalendarDays} label="Date" value={formatDate(b.date)} />
+          <View style={s.divider} />
+          <Row Icon={Briefcase} label="Durée" value={`${b.duration} min`} />
+          <View style={s.divider} />
+          <View style={s.totalRow}>
+            <Text style={s.totalLabel}>Total</Text>
+            <Text style={s.totalValue}>{total} €</Text>
+          </View>
+        </View>
+
+        {/* Contacter */}
+        <Pressable style={s.secondary} onPress={() => router.push(`/chat/${b.id}`)}>
+          <MessageCircle size={18} color={colors.link} />
+          <Text style={s.secondaryText}>Contacter {otherName?.split(' ')[0] ?? ''}</Text>
+        </Pressable>
+
+        {/* Actions prestataire */}
+        {amPro && b.status === 'PENDING' && (
+          <View style={s.actions}>
+            <Pressable style={[s.btnGhost]} disabled={busy} onPress={() => setStatus('CANCELLED')}>
+              <X size={17} color={colors.muted} />
+              <Text style={s.btnGhostText}>Refuser</Text>
+            </Pressable>
+            <Pressable style={[s.btnDark]} disabled={busy} onPress={() => setStatus('CONFIRMED')}>
+              <Check size={17} color="#fff" />
+              <Text style={s.btnDarkText}>Accepter</Text>
+            </Pressable>
+          </View>
+        )}
+        {amPro && b.status === 'CONFIRMED' && (
+          <Pressable style={s.btnDarkFull} disabled={busy} onPress={() => setStatus('COMPLETED')}>
+            <Check size={17} color="#fff" />
+            <Text style={s.btnDarkText}>Marquer comme terminée</Text>
+          </Pressable>
+        )}
+
+        {/* Annulation client */}
+        {amClient && (b.status === 'PENDING' || b.status === 'CONFIRMED') && (
+          <Pressable style={s.cancel} disabled={busy} onPress={() => setStatus('CANCELLED')}>
+            <Text style={s.cancelText}>Annuler la réservation</Text>
+          </Pressable>
+        )}
+
+        {/* Avis client après prestation terminée */}
+        {amClient && b.status === 'COMPLETED' && !reviewSent && (
+          <View style={s.reviewBox}>
+            <Text style={s.reviewTitle}>Votre avis</Text>
+            <View style={s.stars}>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <Pressable key={n} onPress={() => setRating(n)} hitSlop={6}>
+                  <Star size={30} color={colors.star} fill={n <= rating ? colors.star : 'transparent'} />
+                </Pressable>
+              ))}
+            </View>
+            <TextInput
+              value={comment}
+              onChangeText={setComment}
+              placeholder="Partagez votre expérience…"
+              placeholderTextColor={colors.faint}
+              multiline
+              style={s.textarea}
+            />
+            <Pressable style={s.btnPrimary} disabled={busy} onPress={submitReview}>
+              {busy ? <ActivityIndicator color="#fff" /> : <Text style={s.btnPrimaryText}>Publier mon avis</Text>}
+            </Pressable>
+          </View>
+        )}
+        {reviewSent && (
+          <View style={s.thanks}>
+            <Check size={18} color={colors.okText} />
+            <Text style={s.thanksText}>Merci pour votre avis !</Text>
+          </View>
+        )}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+function Row({ Icon, label, value }: { Icon: any; label: string; value: string }) {
+  return (
+    <View style={s.row}>
+      <View style={s.rowIcon}>
+        <Icon size={16} color={colors.link} />
+      </View>
+      <Text style={s.rowLabel}>{label}</Text>
+      <Text style={s.rowValue} numberOfLines={1}>
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+const s = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.bg },
+  scroll: { paddingHorizontal: 20, paddingBottom: 32 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
+  muted: { fontFamily: font.body, fontSize: 15, color: colors.muted },
+  head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4, marginBottom: 16 },
+  service: { fontFamily: font.display, fontSize: 24, color: colors.ink, letterSpacing: -0.5, flex: 1 },
+  card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 18, padding: 18 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 5 },
+  rowIcon: { width: 30, height: 30, borderRadius: 10, backgroundColor: colors.chip, alignItems: 'center', justifyContent: 'center' },
+  rowLabel: { fontFamily: font.body, fontSize: 13.5, color: colors.muted },
+  rowValue: { flex: 1, textAlign: 'right', fontFamily: font.semi, fontSize: 14, color: colors.ink },
+  divider: { height: 1, backgroundColor: colors.line, marginVertical: 8 },
+  totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
+  totalLabel: { fontFamily: font.semi, fontSize: 15, color: colors.ink },
+  totalValue: { fontFamily: font.display, fontSize: 20, color: colors.ink },
+
+  secondary: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 16, paddingVertical: 14, borderRadius: 14, borderWidth: 1, borderColor: colors.line3, backgroundColor: colors.surface },
+  secondaryText: { fontFamily: font.semi, fontSize: 15, color: colors.link },
+
+  actions: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  btnGhost: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 14, borderRadius: 13, borderWidth: 1, borderColor: colors.line3 },
+  btnGhostText: { fontFamily: font.semi, fontSize: 14.5, color: colors.muted },
+  btnDark: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 14, borderRadius: 13, backgroundColor: colors.proInk },
+  btnDarkFull: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 15, borderRadius: 14, backgroundColor: colors.proInk, marginTop: 12 },
+  btnDarkText: { fontFamily: font.semi, fontSize: 14.5, color: '#fff' },
+
+  cancel: { marginTop: 14, paddingVertical: 14, alignItems: 'center' },
+  cancelText: { fontFamily: font.semi, fontSize: 15, color: '#dc2626' },
+
+  reviewBox: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 18, padding: 18, marginTop: 16 },
+  reviewTitle: { fontFamily: font.displaySemi, fontSize: 17, color: colors.ink, marginBottom: 12 },
+  stars: { flexDirection: 'row', gap: 8, marginBottom: 14 },
+  textarea: { minHeight: 80, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.line3, borderRadius: 13, padding: 14, fontFamily: font.body, fontSize: 15, color: colors.ink, textAlignVertical: 'top', marginBottom: 14 },
+  btnPrimary: { backgroundColor: colors.blue, borderRadius: 13, paddingVertical: 15, alignItems: 'center' },
+  btnPrimaryText: { color: '#fff', fontFamily: font.semi, fontSize: 15 },
+
+  thanks: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 16, paddingVertical: 14, borderRadius: 14, backgroundColor: colors.okBg },
+  thanksText: { fontFamily: font.semi, fontSize: 15, color: colors.okText },
+});

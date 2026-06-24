@@ -14,6 +14,7 @@ import { Link, useRouter } from 'expo-router';
 import { supabase } from '../lib/supabase';
 import { colors, font } from '../theme/colors';
 import { Logo } from '../components/Logo';
+import { GoogleButton } from '../components/GoogleButton';
 
 export default function SignUp() {
   const router = useRouter();
@@ -84,6 +85,8 @@ export default function SignUp() {
               </>
             )}
           </View>
+
+          {!done && <GoogleButton />}
 
           <View style={s.footer}>
             <Text style={s.footerText}>Déjà membre ? </Text>

@@ -1,5 +1,5 @@
 -- ============================================================
--- SERVI — Activation backend pour l'app mobile
+-- SERVI — Activation backend complète pour l'app mobile
 -- Projet Supabase : sugovioteynfkxbkkzdy (le même que le web)
 -- À exécuter dans : Dashboard → SQL Editor → New query → Run
 -- 100% idempotent : peut être relancé sans risque.
@@ -7,66 +7,118 @@
 -- ============================================================
 
 -- ------------------------------------------------------------
--- 1) Backfill : une ligne public."User" pour chaque compte auth
---    existant (les nouveaux comptes sont gérés par le trigger).
---    Indispensable pour que clientId d'une réservation soit valide.
+-- 1) Backfill : une ligne public."User" pour chaque compte auth.
 -- ------------------------------------------------------------
 insert into public."User" (id, email, name, role, "createdAt", "updatedAt")
-select u.id,
-       u.email,
+select u.id, u.email,
        coalesce(u.raw_user_meta_data->>'name', u.raw_user_meta_data->>'full_name', u.email),
-       'CLIENT',
-       now(), now()
+       'CLIENT', now(), now()
 from auth.users u
 on conflict (id) do nothing;
 
 -- ------------------------------------------------------------
--- 2) Droits + RLS
---    Catalogue prestataires lisible publiquement ; chacun gère ses réservations.
+-- 2) Droits (grants) pour les rôles anon / authenticated
 -- ------------------------------------------------------------
 grant usage on schema public to anon, authenticated;
 grant select on public."User", public."PrestataireProfile", public."Review" to anon, authenticated;
-grant select, insert on public."Booking" to authenticated;
+grant update on public."User" to authenticated;
+grant insert, update on public."PrestataireProfile" to authenticated;
+grant select, insert, update on public."Booking" to authenticated;
+grant insert on public."Review" to authenticated;
+grant select, insert on public."ChatRoom", public."Message" to authenticated;
 
+-- ------------------------------------------------------------
+-- 3) RLS
+-- ------------------------------------------------------------
 alter table public."User"               enable row level security;
 alter table public."PrestataireProfile" enable row level security;
 alter table public."Review"             enable row level security;
 alter table public."Booking"            enable row level security;
+alter table public."ChatRoom"           enable row level security;
+alter table public."Message"            enable row level security;
 
--- Prestataires (role PRESTATAIRE) lisibles par tous ; chacun voit aussi sa propre ligne.
+-- — User : catalogue prestataires public + chacun lit/édite sa fiche —
 drop policy if exists "servi_user_read" on public."User";
 create policy "servi_user_read" on public."User"
   for select using (role = 'PRESTATAIRE' or id = auth.uid()::text);
 
--- Chacun peut mettre à jour sa propre fiche.
 drop policy if exists "servi_user_update_self" on public."User";
 create policy "servi_user_update_self" on public."User"
   for update using (id = auth.uid()::text) with check (id = auth.uid()::text);
 
--- Profils prestataires : lecture publique (catalogue).
+-- — PrestataireProfile : lecture publique + chacun gère la sienne —
 drop policy if exists "servi_prestataire_read" on public."PrestataireProfile";
 create policy "servi_prestataire_read" on public."PrestataireProfile"
   for select using (true);
 
--- Avis : lecture publique.
+drop policy if exists "servi_prestataire_insert" on public."PrestataireProfile";
+create policy "servi_prestataire_insert" on public."PrestataireProfile"
+  for insert to authenticated with check ("userId" = auth.uid()::text);
+
+drop policy if exists "servi_prestataire_update" on public."PrestataireProfile";
+create policy "servi_prestataire_update" on public."PrestataireProfile"
+  for update to authenticated using ("userId" = auth.uid()::text) with check ("userId" = auth.uid()::text);
+
+-- — Review : lecture publique + dépôt par l'auteur —
 drop policy if exists "servi_review_read" on public."Review";
 create policy "servi_review_read" on public."Review"
   for select using (true);
 
--- Réservations : un utilisateur connecté crée et lit les siennes.
+drop policy if exists "servi_review_insert" on public."Review";
+create policy "servi_review_insert" on public."Review"
+  for insert to authenticated with check ("fromUserId" = auth.uid()::text);
+
+-- — Booking : créer / lire / mettre à jour les siennes —
 drop policy if exists "servi_booking_insert" on public."Booking";
 create policy "servi_booking_insert" on public."Booking"
-  for insert to authenticated
-  with check ("clientId" = auth.uid()::text);
+  for insert to authenticated with check ("clientId" = auth.uid()::text);
 
 drop policy if exists "servi_booking_read" on public."Booking";
 create policy "servi_booking_read" on public."Booking"
   for select to authenticated
   using ("clientId" = auth.uid()::text or "prestataireId" = auth.uid()::text);
 
+drop policy if exists "servi_booking_update" on public."Booking";
+create policy "servi_booking_update" on public."Booking"
+  for update to authenticated
+  using ("clientId" = auth.uid()::text or "prestataireId" = auth.uid()::text)
+  with check ("clientId" = auth.uid()::text or "prestataireId" = auth.uid()::text);
+
+-- — ChatRoom : accessible aux 2 parties de la réservation liée —
+drop policy if exists "servi_chatroom_access" on public."ChatRoom";
+create policy "servi_chatroom_access" on public."ChatRoom"
+  for select to authenticated using (
+    exists (select 1 from public."Booking" b
+            where b.id = public."ChatRoom"."bookingId"
+              and (b."clientId" = auth.uid()::text or b."prestataireId" = auth.uid()::text)));
+
+drop policy if exists "servi_chatroom_insert" on public."ChatRoom";
+create policy "servi_chatroom_insert" on public."ChatRoom"
+  for insert to authenticated with check (
+    exists (select 1 from public."Booking" b
+            where b.id = public."ChatRoom"."bookingId"
+              and (b."clientId" = auth.uid()::text or b."prestataireId" = auth.uid()::text)));
+
+-- — Message : lisible / postable par les 2 parties de la réservation —
+drop policy if exists "servi_message_read" on public."Message";
+create policy "servi_message_read" on public."Message"
+  for select to authenticated using (
+    exists (select 1 from public."ChatRoom" r
+            join public."Booking" b on b.id = r."bookingId"
+            where r.id = public."Message"."chatRoomId"
+              and (b."clientId" = auth.uid()::text or b."prestataireId" = auth.uid()::text)));
+
+drop policy if exists "servi_message_insert" on public."Message";
+create policy "servi_message_insert" on public."Message"
+  for insert to authenticated with check (
+    "senderId" = auth.uid()::text and
+    exists (select 1 from public."ChatRoom" r
+            join public."Booking" b on b.id = r."bookingId"
+            where r.id = public."Message"."chatRoomId"
+              and (b."clientId" = auth.uid()::text or b."prestataireId" = auth.uid()::text)));
+
 -- ------------------------------------------------------------
--- 3) Prestataires de démonstration (réversibles — voir bloc 4)
---    service = nom de catégorie (l'app le mappe automatiquement).
+-- 4) Prestataires de démonstration (réversibles — voir bloc 5)
 -- ------------------------------------------------------------
 insert into public."User" (id, email, name, role, image, "createdAt", "updatedAt") values
   ('demo-menage-1',     'demo.menage@serviapp.app',     'Awa Diop',      'PRESTATAIRE', null, now(), now()),
@@ -91,7 +143,7 @@ insert into public."PrestataireProfile" (id, "userId", service, "hourlyRate", de
 on conflict (id) do nothing;
 
 -- ------------------------------------------------------------
--- 4) (Optionnel) Retirer les prestataires de démonstration :
+-- 5) (Optionnel) Retirer les prestataires de démonstration :
 -- delete from public."PrestataireProfile" where id like 'pp-%';
 -- delete from public."User" where id like 'demo-%';
 -- ============================================================

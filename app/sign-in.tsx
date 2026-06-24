@@ -14,6 +14,7 @@ import { Link, useRouter } from 'expo-router';
 import { supabase } from '../lib/supabase';
 import { colors, font } from '../theme/colors';
 import { Logo } from '../components/Logo';
+import { GoogleButton } from '../components/GoogleButton';
 
 export default function SignIn() {
   const router = useRouter();
@@ -71,6 +72,8 @@ export default function SignIn() {
               {loading ? <ActivityIndicator color="#fff" /> : <Text style={s.btnText}>Se connecter</Text>}
             </Pressable>
           </View>
+
+          <GoogleButton />
 
           <View style={s.footer}>
             <Text style={s.footerText}>Nouveau sur SERVI ? </Text>

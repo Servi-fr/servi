@@ -1,16 +1,71 @@
-import { useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { useCallback, useState } from 'react';
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { CalendarDays, Clock, MapPin, Check, X, Inbox } from 'lucide-react-native';
+import { useFocusEffect } from 'expo-router';
+import { CalendarDays, MapPin, Check, X, Inbox } from 'lucide-react-native';
 import { colors, font } from '../../theme/colors';
-import { proRequests, initials, type BookingRequest } from '../../lib/data';
+import { initials } from '../../lib/data';
+import { getProBookings, updateBookingStatus, formatDate, seedProRequests } from '../../lib/api';
 
 type Status = 'pending' | 'accepted' | 'refused';
+type Card = {
+  id: string;
+  client: string;
+  service: string;
+  datetime: string;
+  city: string;
+  price: number;
+  live: boolean;
+};
 
 export default function ProDemandes() {
+  const [cards, setCards] = useState<Card[] | null>(null);
   const [statuses, setStatuses] = useState<Record<string, Status>>({});
 
-  const setStatus = (id: string, st: Status) => setStatuses((prev) => ({ ...prev, [id]: st }));
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      getProBookings().then((bookings) => {
+        if (!active) return;
+        const pending = bookings.filter((b) => b.status === 'PENDING');
+        if (pending.length > 0) {
+          setCards(
+            pending.map((b) => ({
+              id: b.id,
+              client: b.client?.name ?? 'Client',
+              service: b.service,
+              datetime: formatDate(b.date),
+              city: '',
+              price: b.price + b.commission,
+              live: true,
+            })),
+          );
+        } else {
+          setCards(
+            seedProRequests.map((r) => ({
+              id: r.id,
+              client: r.client,
+              service: r.service,
+              datetime: `${r.date} · ${r.time}`,
+              city: r.city,
+              price: r.price,
+              live: false,
+            })),
+          );
+        }
+      });
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
+
+  async function act(card: Card, decision: Status) {
+    setStatuses((p) => ({ ...p, [card.id]: decision }));
+    if (card.live) {
+      await updateBookingStatus(card.id, decision === 'accepted' ? 'CONFIRMED' : 'CANCELLED');
+    }
+  }
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
@@ -19,7 +74,11 @@ export default function ProDemandes() {
         <Text style={s.lead}>Acceptez ou refusez les nouvelles réservations.</Text>
       </View>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-        {proRequests.length === 0 ? (
+        {cards === null ? (
+          <View style={s.loading}>
+            <ActivityIndicator color={colors.proInk} />
+          </View>
+        ) : cards.length === 0 ? (
           <View style={s.empty}>
             <View style={s.emptyIcon}>
               <Inbox size={26} color={colors.proInk} />
@@ -28,69 +87,58 @@ export default function ProDemandes() {
             <Text style={s.emptyText}>Les nouvelles réservations apparaîtront ici.</Text>
           </View>
         ) : (
-          proRequests.map((r) => <RequestCard key={r.id} req={r} status={statuses[r.id] ?? 'pending'} onSet={setStatus} />)
+          cards.map((c) => {
+            const st = statuses[c.id] ?? 'pending';
+            return (
+              <View key={c.id} style={s.card}>
+                <View style={s.cardTop}>
+                  <View style={s.avatar}>
+                    <Text style={s.avatarText}>{initials(c.client)}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.client}>{c.client}</Text>
+                    <Text style={s.service}>{c.service}</Text>
+                  </View>
+                  <Text style={s.price}>{c.price} €</Text>
+                </View>
+
+                <View style={s.meta}>
+                  <View style={s.metaItem}>
+                    <CalendarDays size={14} color={colors.muted} />
+                    <Text style={s.metaText}>{c.datetime}</Text>
+                  </View>
+                  {!!c.city && (
+                    <View style={s.metaItem}>
+                      <MapPin size={14} color={colors.muted} />
+                      <Text style={s.metaText}>{c.city}</Text>
+                    </View>
+                  )}
+                </View>
+
+                {st === 'pending' ? (
+                  <View style={s.actions}>
+                    <Pressable style={s.refuse} onPress={() => act(c, 'refused')}>
+                      <X size={17} color={colors.muted} />
+                      <Text style={s.refuseText}>Refuser</Text>
+                    </Pressable>
+                    <Pressable style={s.accept} onPress={() => act(c, 'accepted')}>
+                      <Check size={17} color="#fff" />
+                      <Text style={s.acceptText}>Accepter</Text>
+                    </Pressable>
+                  </View>
+                ) : (
+                  <View style={[s.badge, st === 'accepted' ? s.badgeOk : s.badgeNo]}>
+                    <Text style={[s.badgeText, st === 'accepted' ? s.badgeTextOk : s.badgeTextNo]}>
+                      {st === 'accepted' ? '✓ Acceptée — ajoutée au planning' : 'Demande refusée'}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            );
+          })
         )}
       </ScrollView>
     </SafeAreaView>
-  );
-}
-
-function RequestCard({
-  req,
-  status,
-  onSet,
-}: {
-  req: BookingRequest;
-  status: Status;
-  onSet: (id: string, st: Status) => void;
-}) {
-  return (
-    <View style={s.card}>
-      <View style={s.cardTop}>
-        <View style={s.avatar}>
-          <Text style={s.avatarText}>{initials(req.client)}</Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={s.client}>{req.client}</Text>
-          <Text style={s.service}>{req.service}</Text>
-        </View>
-        <Text style={s.price}>{req.price} €</Text>
-      </View>
-
-      <View style={s.meta}>
-        <View style={s.metaItem}>
-          <CalendarDays size={14} color={colors.muted} />
-          <Text style={s.metaText}>{req.date}</Text>
-        </View>
-        <View style={s.metaItem}>
-          <Clock size={14} color={colors.muted} />
-          <Text style={s.metaText}>{req.time}</Text>
-        </View>
-        <View style={s.metaItem}>
-          <MapPin size={14} color={colors.muted} />
-          <Text style={s.metaText}>{req.city}</Text>
-        </View>
-      </View>
-
-      {status === 'pending' ? (
-        <View style={s.actions}>
-          <Pressable style={s.refuse} onPress={() => onSet(req.id, 'refused')}>
-            <X size={17} color={colors.muted} />
-            <Text style={s.refuseText}>Refuser</Text>
-          </Pressable>
-          <Pressable style={s.accept} onPress={() => onSet(req.id, 'accepted')}>
-            <Check size={17} color="#fff" />
-            <Text style={s.acceptText}>Accepter</Text>
-          </Pressable>
-        </View>
-      ) : (
-        <View style={[s.badge, status === 'accepted' ? s.badgeOk : s.badgeNo]}>
-          <Text style={[s.badgeText, status === 'accepted' ? s.badgeTextOk : s.badgeTextNo]}>
-            {status === 'accepted' ? '✓ Acceptée — ajoutée au planning' : 'Demande refusée'}
-          </Text>
-        </View>
-      )}
-    </View>
   );
 }
 
@@ -100,7 +148,7 @@ const s = StyleSheet.create({
   h1: { fontFamily: font.display, fontSize: 28, color: colors.proInk, letterSpacing: -0.5 },
   lead: { fontFamily: font.body, fontSize: 14, color: colors.muted, marginTop: 6 },
   scroll: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 28, gap: 12 },
-
+  loading: { paddingTop: 60, alignItems: 'center' },
   card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 18, padding: 16 },
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatar: { width: 46, height: 46, borderRadius: 14, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
@@ -108,24 +156,20 @@ const s = StyleSheet.create({
   client: { fontFamily: font.semi, fontSize: 16, color: colors.ink },
   service: { fontFamily: font.body, fontSize: 13.5, color: colors.muted, marginTop: 1 },
   price: { fontFamily: font.display, fontSize: 18, color: colors.proInk },
-
   meta: { flexDirection: 'row', flexWrap: 'wrap', gap: 14, marginTop: 14, marginBottom: 4 },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   metaText: { fontFamily: font.medium, fontSize: 13, color: colors.muted },
-
   actions: { flexDirection: 'row', gap: 10, marginTop: 14 },
   refuse: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 13, borderRadius: 13, borderWidth: 1, borderColor: colors.line3 },
   refuseText: { fontFamily: font.semi, fontSize: 14.5, color: colors.muted },
   accept: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 13, borderRadius: 13, backgroundColor: colors.proInk },
   acceptText: { fontFamily: font.semi, fontSize: 14.5, color: '#fff' },
-
   badge: { marginTop: 14, paddingVertical: 12, borderRadius: 12, alignItems: 'center' },
   badgeOk: { backgroundColor: colors.okBg },
   badgeNo: { backgroundColor: '#f3f4f6' },
   badgeText: { fontFamily: font.semi, fontSize: 13.5 },
   badgeTextOk: { color: colors.okText },
   badgeTextNo: { color: colors.muted },
-
   empty: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 30 },
   emptyIcon: { width: 56, height: 56, borderRadius: 16, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
   emptyTitle: { fontFamily: font.displaySemi, fontSize: 18, color: colors.ink, marginBottom: 8 },

@@ -1,58 +1,91 @@
+import { useCallback, useState } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { TrendingUp, Star, CheckCircle2, Clock, ChevronRight, ArrowUpRight } from 'lucide-react-native';
 import { colors, font } from '../../theme/colors';
-import { currentPro, proRequests, proPlanning, initials } from '../../lib/data';
+import { initials } from '../../lib/data';
+import { getProBookings, getMyProfile, seedProPlanning, seedProRequests, type BookingRow } from '../../lib/api';
+
+function isToday(iso: string) {
+  const d = new Date(iso);
+  const n = new Date();
+  return d.getDate() === n.getDate() && d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear();
+}
+const hhmm = (iso: string) => {
+  const d = new Date(iso);
+  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+};
 
 export default function ProDashboard() {
   const router = useRouter();
-  const today = proPlanning.find((d) => d.day === "Aujourd'hui");
+  const [bookings, setBookings] = useState<BookingRow[] | null>(null);
+  const [name, setName] = useState('Prestataire');
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      getProBookings().then((b) => active && setBookings(b));
+      getMyProfile().then((p) => active && p?.name && setName(p.name));
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
+
+  const live = (bookings?.length ?? 0) > 0;
+  const pendingCount = live ? bookings!.filter((b) => b.status === 'PENDING').length : seedProRequests.length;
+  const missions = live ? bookings!.length : 32;
+  const revenue = live ? bookings!.filter((b) => b.status === 'COMPLETED').reduce((s, b) => s + b.price, 0) : 1840;
+  const today: { time: string; client: string; service: string }[] = live
+    ? bookings!
+        .filter((b) => b.status !== 'CANCELLED' && isToday(b.date))
+        .map((b) => ({ time: hhmm(b.date), client: b.client?.name ?? 'Client', service: b.service }))
+    : seedProPlanning[0].items.map((i) => ({ time: i.time, client: i.client, service: i.service }));
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-        {/* En-tête */}
         <View style={s.head}>
           <View>
             <Text style={s.hello}>Bonjour,</Text>
-            <Text style={s.name}>{currentPro.name}</Text>
+            <Text style={s.name}>{name}</Text>
           </View>
           <View style={s.avatar}>
-            <Text style={s.avatarText}>{initials(currentPro.name)}</Text>
+            <Text style={s.avatarText}>{initials(name)}</Text>
           </View>
         </View>
 
-        {/* Revenu du mois — carte N&B */}
         <View style={s.hero}>
-          <Text style={s.heroLabel}>Revenus du mois</Text>
-          <Text style={s.heroValue}>1 840 €</Text>
+          <Text style={s.heroLabel}>Revenus {live ? '(prestations terminées)' : 'du mois'}</Text>
+          <Text style={s.heroValue}>{revenue.toLocaleString('fr-FR')} €</Text>
           <View style={s.heroTrend}>
             <ArrowUpRight size={15} color="#7ee2a8" />
-            <Text style={s.heroTrendText}>+18 % vs mois dernier</Text>
+            <Text style={s.heroTrendText}>{live ? `${missions} réservation${missions > 1 ? 's' : ''}` : '+18 % vs mois dernier'}</Text>
           </View>
         </View>
 
-        {/* KPI */}
         <View style={s.kpiRow}>
-          <Kpi Icon={TrendingUp} value="32" label="Missions" />
-          <Kpi Icon={Star} value={currentPro.rating.toFixed(1)} label="Note" />
-          <Kpi Icon={CheckCircle2} value="96 %" label="Acceptation" />
+          <Kpi Icon={TrendingUp} value={String(missions)} label="Missions" />
+          <Kpi Icon={Star} value={live ? '—' : '4.9'} label="Note" />
+          <Kpi Icon={CheckCircle2} value={live ? String(pendingCount) : '96 %'} label={live ? 'En attente' : 'Acceptation'} />
         </View>
 
-        {/* Demandes en attente */}
-        <Pressable style={s.alert} onPress={() => router.push('/(pro)/demandes')}>
-          <View style={s.alertIcon}>
-            <Clock size={18} color={colors.proInk} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={s.alertTitle}>{proRequests.length} demandes en attente</Text>
-            <Text style={s.alertSub}>Répondez vite pour booster votre classement.</Text>
-          </View>
-          <ChevronRight size={20} color={colors.faint} />
-        </Pressable>
+        {pendingCount > 0 && (
+          <Pressable style={s.alert} onPress={() => router.push('/(pro)/demandes')}>
+            <View style={s.alertIcon}>
+              <Clock size={18} color={colors.proInk} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.alertTitle}>
+                {pendingCount} demande{pendingCount > 1 ? 's' : ''} en attente
+              </Text>
+              <Text style={s.alertSub}>Répondez vite pour booster votre classement.</Text>
+            </View>
+            <ChevronRight size={20} color={colors.faint} />
+          </Pressable>
+        )}
 
-        {/* Prochaines missions */}
         <View style={s.sectionRow}>
           <Text style={s.section}>Aujourd'hui</Text>
           <Pressable onPress={() => router.push('/(pro)/planning')}>
@@ -60,16 +93,16 @@ export default function ProDashboard() {
           </Pressable>
         </View>
 
-        {today ? (
+        {today.length > 0 ? (
           <View style={{ gap: 10 }}>
-            {today.items.map((m) => (
-              <View key={m.time + m.client} style={s.mission}>
+            {today.map((m, idx) => (
+              <View key={m.time + m.client + idx} style={s.mission}>
                 <View style={s.missionTime}>
                   <Text style={s.missionTimeText}>{m.time}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.missionClient}>{m.client}</Text>
-                  <Text style={s.missionService}>{m.service} · {m.city}</Text>
+                  <Text style={s.missionService}>{m.service}</Text>
                 </View>
               </View>
             ))}
@@ -100,27 +133,22 @@ const s = StyleSheet.create({
   name: { fontFamily: font.display, fontSize: 24, color: colors.proInk, letterSpacing: -0.5, marginTop: 2 },
   avatar: { width: 48, height: 48, borderRadius: 15, backgroundColor: colors.proInk, alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontFamily: font.display, fontSize: 16, color: '#fff' },
-
   hero: { backgroundColor: colors.proInk, borderRadius: 22, padding: 22 },
   heroLabel: { fontFamily: font.medium, fontSize: 13, color: '#aeb6c6' },
   heroValue: { fontFamily: font.display, fontSize: 34, color: '#fff', letterSpacing: -1, marginTop: 6 },
   heroTrend: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8 },
   heroTrendText: { fontFamily: font.medium, fontSize: 13, color: '#7ee2a8' },
-
   kpiRow: { flexDirection: 'row', gap: 10, marginTop: 14 },
   kpi: { flex: 1, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 16, paddingVertical: 16, alignItems: 'center', gap: 5 },
   kpiValue: { fontFamily: font.displaySemi, fontSize: 19, color: colors.proInk },
   kpiLabel: { fontFamily: font.body, fontSize: 11.5, color: colors.faint },
-
   alert: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line3, borderRadius: 16, padding: 14, marginTop: 14 },
   alertIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
   alertTitle: { fontFamily: font.semi, fontSize: 15, color: colors.ink },
   alertSub: { fontFamily: font.body, fontSize: 12.5, color: colors.muted, marginTop: 1 },
-
   sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 26, marginBottom: 12 },
   section: { fontFamily: font.display, fontSize: 19, color: colors.proInk, letterSpacing: -0.4 },
   link: { fontFamily: font.semi, fontSize: 13.5, color: colors.proInk },
-
   mission: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 16, padding: 14 },
   missionTime: { backgroundColor: colors.proInk, borderRadius: 11, paddingVertical: 8, paddingHorizontal: 11 },
   missionTimeText: { fontFamily: font.semi, fontSize: 13, color: '#fff' },

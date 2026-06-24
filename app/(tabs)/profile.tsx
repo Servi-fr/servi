@@ -6,9 +6,10 @@ import { LogOut, CalendarDays, CreditCard, Heart, ChevronRight, ArrowLeftRight, 
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '../../lib/supabase';
 import { colors, font } from '../../theme/colors';
+import { getMyProviderProfile } from '../../lib/api';
 
-const items: { label: string; Icon: LucideIcon }[] = [
-  { label: 'Mes réservations', Icon: CalendarDays },
+const items: { label: string; Icon: LucideIcon; route?: string }[] = [
+  { label: 'Mes réservations', Icon: CalendarDays, route: '/bookings' },
   { label: 'Paiements', Icon: CreditCard },
   { label: 'Favoris', Icon: Heart },
 ];
@@ -16,9 +17,11 @@ const items: { label: string; Icon: LucideIcon }[] = [
 export default function Profile() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
+  const [isProvider, setIsProvider] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
+    getMyProviderProfile().then((p) => setIsProvider(!!p));
   }, []);
 
   async function logout() {
@@ -40,7 +43,7 @@ export default function Profile() {
       <View style={s.scroll}>
         <Text style={s.h1}>Profil</Text>
 
-        <View style={s.userCard}>
+        <Pressable style={s.userCard} onPress={() => router.push('/profile-edit')}>
           <View style={s.avatar}>
             <Text style={s.avatarText}>{initials}</Text>
           </View>
@@ -48,11 +51,16 @@ export default function Profile() {
             <Text style={s.name}>{name}</Text>
             <Text style={s.email}>{user?.email}</Text>
           </View>
-        </View>
+          <ChevronRight size={18} color={colors.faint} />
+        </Pressable>
 
         <View style={s.menu}>
-          {items.map(({ label, Icon }, i) => (
-            <Pressable key={label} style={[s.menuRow, i > 0 && s.menuBorder]}>
+          {items.map(({ label, Icon, route }, i) => (
+            <Pressable
+              key={label}
+              style={[s.menuRow, i > 0 && s.menuBorder]}
+              onPress={() => route && router.push(route)}
+            >
               <Icon size={20} color={colors.link} />
               <Text style={s.menuLabel}>{label}</Text>
               <ChevronRight size={18} color={colors.faint} />
@@ -60,9 +68,12 @@ export default function Profile() {
           ))}
         </View>
 
-        <Pressable style={s.switch} onPress={() => router.push('/(pro)/dashboard')}>
+        <Pressable
+          style={s.switch}
+          onPress={() => router.push(isProvider ? '/(pro)/dashboard' : '/devenir-prestataire')}
+        >
           <ArrowLeftRight size={18} color={colors.proInk} />
-          <Text style={s.switchText}>Passer en mode prestataire</Text>
+          <Text style={s.switchText}>{isProvider ? 'Espace prestataire' : 'Devenir prestataire'}</Text>
         </Pressable>
 
         <Pressable onPress={logout} style={s.logout}>

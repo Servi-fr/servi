@@ -1,9 +1,26 @@
 // Couche d'accès aux données — Supabase d'abord, repli sur le catalogue local.
-// Le backend est le même que le web (tables Prisma : User, PrestataireProfile, Booking).
-// Rappel schéma : public."User".id == auth.users.id (trigger) → clientId = session.user.id.
+// Backend = celui du web (Prisma : User, PrestataireProfile, Booking, Review, ChatRoom, Message).
+// Clé : public."User".id == auth.users.id (trigger) → clientId = session.user.id.
 import { supabase } from './supabase';
-import { providers as seedProviders, categories, type Provider } from './data';
+import {
+  providers as seedProviders,
+  categories,
+  proRequests as seedRequests,
+  proPlanning as seedPlanning,
+  type Provider,
+} from './data';
 
+const nowISO = () => new Date().toISOString();
+const genId = (p: string) => p + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
+
+export async function getUid(): Promise<string | null> {
+  const { data } = await supabase.auth.getUser();
+  return data.user?.id ?? null;
+}
+
+// ============================================================
+//  Catalogue prestataires
+// ============================================================
 type ProfileRow = {
   id: string;
   userId: string;
@@ -15,18 +32,16 @@ type ProfileRow = {
   zone: string | null;
   User: {
     name: string | null;
-    image: string | null;
     firstName: string | null;
     lastName: string | null;
     address: string | null;
   } | null;
 };
 
-// Associe un service (texte libre en base) à un slug de catégorie de l'app.
 function serviceToSlug(service: string): string {
   const s = (service || '').toLowerCase();
   for (const c of categories) {
-    const key = c.name.toLowerCase().split(' ')[0]; // « Cours particuliers » → « cours »
+    const key = c.name.toLowerCase().split(' ')[0];
     if (s.includes(key) || s.includes(c.slug)) return c.slug;
   }
   return categories[0].slug;
@@ -39,7 +54,7 @@ function fullName(u: ProfileRow['User']): string {
 
 function mapRow(r: ProfileRow): Provider {
   return {
-    id: r.userId, // == prestataireId pour la réservation
+    id: r.userId,
     name: fullName(r.User),
     category: serviceToSlug(r.service),
     tagline: r.service || 'Prestataire vérifié',
@@ -53,28 +68,20 @@ function mapRow(r: ProfileRow): Provider {
   };
 }
 
-// Prestataires réellement en base (vide si rien / erreur / RLS).
 async function fetchLive(): Promise<Provider[]> {
   try {
     const { data, error } = await supabase
       .from('PrestataireProfile')
-      .select(
-        'id,userId,service,hourlyRate,description,skills,rating,zone,User(name,image,firstName,lastName,address)',
-      );
+      .select('id,userId,service,hourlyRate,description,skills,rating,zone,User(name,firstName,lastName,address)');
     if (error || !data || data.length === 0) return [];
     return (data as unknown as ProfileRow[])
-      // Ignore les fiches incomplètes (sans nom, sans service réel ou sans tarif).
-      .filter(
-        (r) => r.User && r.service && r.service !== 'À définir' && (r.hourlyRate ?? 0) > 0,
-      )
+      .filter((r) => r.User && r.service && r.service !== 'À définir' && (r.hourlyRate ?? 0) > 0)
       .map(mapRow);
   } catch {
     return [];
   }
 }
 
-// Catalogue : prestataires en base, complétés par le catalogue local
-// pour les catégories qui n'ont pas encore de pro réel.
 export async function getProviders(): Promise<Provider[]> {
   const live = await fetchLive();
   if (live.length === 0) return seedProviders;
@@ -94,7 +101,132 @@ export async function getProviderById(id: string): Promise<Provider | undefined>
   return all.find((p) => p.id === id) ?? seedProviders.find((p) => p.id === id);
 }
 
-// — Réservation —
+// ============================================================
+//  Profil utilisateur
+// ============================================================
+export type Role = 'CLIENT' | 'PRESTATAIRE' | 'ADMIN';
+export type MyProfile = {
+  id: string;
+  name: string | null;
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  address: string | null;
+  phone: string | null;
+  role: Role;
+};
+
+export async function getMyProfile(): Promise<MyProfile | null> {
+  const uid = await getUid();
+  if (!uid) return null;
+  try {
+    const { data } = await supabase
+      .from('User')
+      .select('id,name,email,firstName,lastName,address,phone,role')
+      .eq('id', uid)
+      .maybeSingle();
+    return (data as MyProfile) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function updateMyProfile(
+  p: Partial<Pick<MyProfile, 'firstName' | 'lastName' | 'address' | 'phone' | 'name'>>,
+): Promise<{ ok: boolean; error?: string }> {
+  const uid = await getUid();
+  if (!uid) return { ok: false, error: 'not-auth' };
+  const { error } = await supabase
+    .from('User')
+    .update({ ...p, updatedAt: nowISO() })
+    .eq('id', uid);
+  return error ? { ok: false, error: error.message } : { ok: true };
+}
+
+// ============================================================
+//  Être / devenir prestataire
+// ============================================================
+export type ProviderProfile = {
+  id: string;
+  service: string;
+  hourlyRate: number;
+  description: string | null;
+  zone: string | null;
+  skills: string[] | null;
+  rating: number | null;
+};
+
+export async function getMyProviderProfile(): Promise<ProviderProfile | null> {
+  const uid = await getUid();
+  if (!uid) return null;
+  try {
+    const { data } = await supabase
+      .from('PrestataireProfile')
+      .select('id,service,hourlyRate,description,zone,skills,rating')
+      .eq('userId', uid)
+      .maybeSingle();
+    return (data as ProviderProfile) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function upsertMyProviderProfile(p: {
+  service: string;
+  hourlyRate: number;
+  description?: string;
+  zone?: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const uid = await getUid();
+  if (!uid) return { ok: false, error: 'not-auth' };
+  const existing = await getMyProviderProfile();
+  if (existing) {
+    const { error } = await supabase
+      .from('PrestataireProfile')
+      .update({
+        service: p.service,
+        hourlyRate: p.hourlyRate,
+        description: p.description ?? null,
+        zone: p.zone ?? null,
+      })
+      .eq('userId', uid);
+    if (error) return { ok: false, error: error.message };
+  } else {
+    const { error } = await supabase.from('PrestataireProfile').insert({
+      id: genId('pp'),
+      userId: uid,
+      service: p.service,
+      hourlyRate: p.hourlyRate,
+      description: p.description ?? null,
+      zone: p.zone ?? null,
+      skills: [],
+      totalEarned: 0,
+      rating: 0,
+    });
+    if (error) return { ok: false, error: error.message };
+  }
+  await supabase.from('User').update({ role: 'PRESTATAIRE', updatedAt: nowISO() }).eq('id', uid);
+  return { ok: true };
+}
+
+// ============================================================
+//  Réservations
+// ============================================================
+export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
+export type BookingRow = {
+  id: string;
+  service: string;
+  date: string;
+  duration: number;
+  price: number;
+  commission: number;
+  status: BookingStatus;
+  clientId: string;
+  prestataireId: string;
+  client?: { name: string | null } | null;
+  prestataire?: { name: string | null } | null;
+};
+
 export type NewBooking = {
   prestataireId: string;
   service: string;
@@ -104,15 +236,12 @@ export type NewBooking = {
   commission: number;
 };
 
-// Crée la réservation en base. Best-effort : ne bloque jamais le parcours.
-export async function createBooking(b: NewBooking): Promise<{ ok: boolean; error?: string }> {
-  // Prestataire du catalogue local (pas encore en base) → pas d'insert FK.
+export async function createBooking(b: NewBooking): Promise<{ ok: boolean; error?: string; id?: string }> {
   if (b.prestataireId.startsWith('p-')) return { ok: false, error: 'demo-local' };
   try {
-    const { data: auth } = await supabase.auth.getUser();
-    const uid = auth.user?.id;
+    const uid = await getUid();
     if (!uid) return { ok: false, error: 'not-authenticated' };
-    const id = 'bk_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+    const id = genId('bk');
     const { error } = await supabase.from('Booking').insert({
       id,
       clientId: uid,
@@ -124,11 +253,176 @@ export async function createBooking(b: NewBooking): Promise<{ ok: boolean; error
       commission: b.commission,
       status: 'PENDING',
       paymentStatus: 'PENDING',
-      updatedAt: new Date().toISOString(),
+      updatedAt: nowISO(),
     });
     if (error) return { ok: false, error: error.message };
-    return { ok: true };
+    return { ok: true, id };
   } catch (e: any) {
     return { ok: false, error: e?.message ?? 'unknown' };
   }
+}
+
+export async function getMyBookings(): Promise<BookingRow[]> {
+  const uid = await getUid();
+  if (!uid) return [];
+  try {
+    const { data, error } = await supabase
+      .from('Booking')
+      .select(
+        'id,service,date,duration,price,commission,status,clientId,prestataireId,prestataire:User!Booking_prestataireId_fkey(name)',
+      )
+      .eq('clientId', uid)
+      .order('date', { ascending: false });
+    if (error || !data) return [];
+    return data as unknown as BookingRow[];
+  } catch {
+    return [];
+  }
+}
+
+export async function getProBookings(): Promise<BookingRow[]> {
+  const uid = await getUid();
+  if (!uid) return [];
+  try {
+    const { data, error } = await supabase
+      .from('Booking')
+      .select(
+        'id,service,date,duration,price,commission,status,clientId,prestataireId,client:User!Booking_clientId_fkey(name)',
+      )
+      .eq('prestataireId', uid)
+      .order('date', { ascending: true });
+    if (error || !data) return [];
+    return data as unknown as BookingRow[];
+  } catch {
+    return [];
+  }
+}
+
+export async function getBookingById(id: string): Promise<BookingRow | null> {
+  try {
+    const { data } = await supabase
+      .from('Booking')
+      .select(
+        'id,service,date,duration,price,commission,status,clientId,prestataireId,prestataire:User!Booking_prestataireId_fkey(name),client:User!Booking_clientId_fkey(name)',
+      )
+      .eq('id', id)
+      .maybeSingle();
+    return (data as unknown as BookingRow) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function updateBookingStatus(
+  id: string,
+  status: BookingStatus,
+): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase
+    .from('Booking')
+    .update({ status, updatedAt: nowISO() })
+    .eq('id', id);
+  return error ? { ok: false, error: error.message } : { ok: true };
+}
+
+// Repli démo pour l'espace prestataire quand l'utilisateur n'a pas (encore) de vraies demandes.
+export const seedProRequests = seedRequests;
+export const seedProPlanning = seedPlanning;
+
+// ============================================================
+//  Avis
+// ============================================================
+export type Review = { author: string; rating: number; date: string; text: string };
+
+export async function createReview(input: {
+  bookingId: string;
+  toUserId: string;
+  rating: number;
+  comment: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const uid = await getUid();
+  if (!uid) return { ok: false, error: 'not-auth' };
+  const { error } = await supabase.from('Review').insert({
+    id: genId('rv'),
+    bookingId: input.bookingId,
+    rating: input.rating,
+    comment: input.comment,
+    fromUserId: uid,
+    toUserId: input.toUserId,
+    updatedAt: nowISO(),
+  });
+  return error ? { ok: false, error: error.message } : { ok: true };
+}
+
+// ============================================================
+//  Messagerie (par réservation)
+// ============================================================
+export type ChatMessage = { id: string; content: string; senderId: string; createdAt: string };
+
+async function ensureRoom(bookingId: string): Promise<string | null> {
+  try {
+    const { data: existing } = await supabase
+      .from('ChatRoom')
+      .select('id')
+      .eq('bookingId', bookingId)
+      .maybeSingle();
+    if (existing?.id) return existing.id as string;
+    const id = genId('cr');
+    const { error } = await supabase
+      .from('ChatRoom')
+      .insert({ id, type: 'BOOKING', bookingId, updatedAt: nowISO() });
+    if (error) return null;
+    return id;
+  } catch {
+    return null;
+  }
+}
+
+export async function getMessages(bookingId: string): Promise<ChatMessage[]> {
+  const roomId = await ensureRoom(bookingId);
+  if (!roomId) return [];
+  try {
+    const { data } = await supabase
+      .from('Message')
+      .select('id,content,senderId,createdAt')
+      .eq('chatRoomId', roomId)
+      .order('createdAt', { ascending: true });
+    return (data as ChatMessage[]) ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function sendMessage(bookingId: string, content: string): Promise<{ ok: boolean; error?: string }> {
+  const uid = await getUid();
+  if (!uid) return { ok: false, error: 'not-auth' };
+  const roomId = await ensureRoom(bookingId);
+  if (!roomId) return { ok: false, error: 'no-room' };
+  const { error } = await supabase.from('Message').insert({
+    id: genId('msg'),
+    content,
+    senderId: uid,
+    chatRoomId: roomId,
+    updatedAt: nowISO(),
+  });
+  return error ? { ok: false, error: error.message } : { ok: true };
+}
+
+// ============================================================
+//  Helpers d'affichage
+// ============================================================
+export const STATUS_LABEL: Record<BookingStatus, string> = {
+  PENDING: 'En attente',
+  CONFIRMED: 'Confirmée',
+  COMPLETED: 'Terminée',
+  CANCELLED: 'Annulée',
+};
+
+// Formate une date ISO en « Mer. 24 juin · 14:00 » sans dépendre d'Intl (Hermes).
+const WD = ['Dim.', 'Lun.', 'Mar.', 'Mer.', 'Jeu.', 'Ven.', 'Sam.'];
+const MO = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+export function formatDate(iso: string): string {
+  const d = new Date(iso);
+  const hh = d.getHours().toString().padStart(2, '0');
+  const mm = d.getMinutes().toString().padStart(2, '0');
+  return `${WD[d.getDay()]} ${d.getDate()} ${MO[d.getMonth()]} · ${hh}:${mm}`;
 }
