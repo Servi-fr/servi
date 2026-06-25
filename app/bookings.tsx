@@ -53,7 +53,7 @@ export default function MyBookings() {
             </View>
             <Text style={s.emptyTitle}>Aucune réservation</Text>
             <Text style={s.emptyText}>Trouvez un prestataire vérifié et réservez en quelques secondes.</Text>
-            <Pressable style={s.cta} onPress={() => router.push('/(tabs)/services')}>
+            <Pressable style={s.cta} onPress={() => router.push('/services')}>
               <Text style={s.ctaText}>Explorer les services</Text>
             </Pressable>
           </View>

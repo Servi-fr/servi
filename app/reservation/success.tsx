@@ -45,7 +45,7 @@ export default function ReservationSuccess() {
         <Pressable style={s.primary} onPress={() => router.replace('/(tabs)')}>
           <Text style={s.primaryText}>Retour à l'accueil</Text>
         </Pressable>
-        <Pressable style={s.secondary} onPress={() => router.replace('/(tabs)/messages')}>
+        <Pressable style={s.secondary} onPress={() => router.replace('/messages')}>
           <Text style={s.secondaryText}>Voir mes messages</Text>
         </Pressable>
       </View>

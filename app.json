@@ -29,7 +29,13 @@
       "expo-router",
       "expo-status-bar",
       "expo-secure-store",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "SERVI utilise votre position pour afficher les prestataires proches de vous."
+        }
+      ]
     ],
     "scheme": "serviapp",
     "newArchEnabled": true,

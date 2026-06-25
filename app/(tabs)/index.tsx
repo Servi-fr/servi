@@ -20,13 +20,16 @@ export default function Home() {
           Réservation, paiement et suivi au même endroit — avec des pros vérifiés.
         </Text>
 
-        <Pressable style={s.searchBar} onPress={() => router.push('/(tabs)/services')}>
+        <Pressable style={s.searchBar} onPress={() => router.push('/services')}>
           <Search size={20} color={colors.link} />
           <Text style={s.searchText}>Ménage, plomberie…</Text>
         </Pressable>
 
         <View style={s.rowBetween}>
           <Text style={s.section}>Explorez par famille</Text>
+          <Pressable onPress={() => router.push('/services')}>
+            <Text style={s.link}>Tous les services</Text>
+          </Pressable>
         </View>
 
         <View style={s.grid}>
@@ -69,6 +72,7 @@ const s = StyleSheet.create({
   searchText: { fontFamily: font.medium, fontSize: 15, color: colors.faint },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 26, marginBottom: 14 },
   section: { fontFamily: font.display, fontSize: 20, color: colors.ink, letterSpacing: -0.4 },
+  link: { fontFamily: font.semi, fontSize: 13.5, color: colors.link },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: GAP },
   card: {
     width: '48%',
