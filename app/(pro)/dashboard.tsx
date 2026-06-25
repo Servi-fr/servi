@@ -6,7 +6,7 @@ import { TrendingUp, Star, CheckCircle2, Clock, ChevronRight, ArrowUpRight } fro
 import { colors, font } from '../../theme/colors';
 import { NotifBell } from '../../components/NotifBell';
 import { initials } from '../../lib/data';
-import { getProBookings, getMyProfile, seedProPlanning, seedProRequests, type BookingRow } from '../../lib/api';
+import { getProBookings, getMyProfile, type BookingRow } from '../../lib/api';
 
 function isToday(iso: string) {
   const d = new Date(iso);
@@ -34,15 +34,13 @@ export default function ProDashboard() {
     }, []),
   );
 
-  const live = (bookings?.length ?? 0) > 0;
-  const pendingCount = live ? bookings!.filter((b) => b.status === 'PENDING').length : seedProRequests.length;
-  const missions = live ? bookings!.length : 32;
-  const revenue = live ? bookings!.filter((b) => b.status === 'COMPLETED').reduce((s, b) => s + b.price, 0) : 1840;
-  const today: { time: string; client: string; service: string }[] = live
-    ? bookings!
-        .filter((b) => b.status !== 'CANCELLED' && isToday(b.date))
-        .map((b) => ({ time: hhmm(b.date), client: b.client?.name ?? 'Client', service: b.service }))
-    : seedProPlanning[0].items.map((i) => ({ time: i.time, client: i.client, service: i.service }));
+  const bk = bookings ?? [];
+  const pendingCount = bk.filter((b) => b.status === 'PENDING').length;
+  const missions = bk.length;
+  const revenue = bk.filter((b) => b.status === 'COMPLETED').reduce((s, b) => s + b.price, 0);
+  const today: { time: string; client: string; service: string }[] = bk
+    .filter((b) => b.status !== 'CANCELLED' && isToday(b.date))
+    .map((b) => ({ time: hhmm(b.date), client: b.client?.name ?? 'Client', service: b.service }));
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
@@ -61,18 +59,20 @@ export default function ProDashboard() {
         </View>
 
         <View style={s.hero}>
-          <Text style={s.heroLabel}>Revenus {live ? '(prestations terminées)' : 'du mois'}</Text>
+          <Text style={s.heroLabel}>Revenus (prestations terminées)</Text>
           <Text style={s.heroValue}>{revenue.toLocaleString('fr-FR')} €</Text>
           <View style={s.heroTrend}>
             <ArrowUpRight size={15} color="#7ee2a8" />
-            <Text style={s.heroTrendText}>{live ? `${missions} réservation${missions > 1 ? 's' : ''}` : '+18 % vs mois dernier'}</Text>
+            <Text style={s.heroTrendText}>
+              {missions} réservation{missions > 1 ? 's' : ''}
+            </Text>
           </View>
         </View>
 
         <View style={s.kpiRow}>
           <Kpi Icon={TrendingUp} value={String(missions)} label="Missions" />
-          <Kpi Icon={Star} value={live ? '—' : '4.9'} label="Note" />
-          <Kpi Icon={CheckCircle2} value={live ? String(pendingCount) : '96 %'} label={live ? 'En attente' : 'Acceptation'} />
+          <Kpi Icon={Star} value="—" label="Note" />
+          <Kpi Icon={CheckCircle2} value={String(pendingCount)} label="En attente" />
         </View>
 
         {pendingCount > 0 && (

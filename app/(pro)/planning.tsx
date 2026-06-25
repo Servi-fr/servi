@@ -5,7 +5,7 @@ import { useFocusEffect } from 'expo-router';
 import { MapPin } from 'lucide-react-native';
 import { colors, font } from '../../theme/colors';
 import { type PlanningDay } from '../../lib/data';
-import { getProBookings, seedProPlanning } from '../../lib/api';
+import { getProBookings } from '../../lib/api';
 
 const WD = ['Dim.', 'Lun.', 'Mar.', 'Mer.', 'Jeu.', 'Ven.', 'Sam.'];
 const MO = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
@@ -30,10 +30,6 @@ export default function ProPlanning() {
       getProBookings().then((bookings) => {
         if (!active) return;
         const confirmed = bookings.filter((b) => b.status === 'CONFIRMED' || b.status === 'COMPLETED');
-        if (confirmed.length === 0) {
-          setDays(seedProPlanning);
-          return;
-        }
         const map = new Map<string, PlanningDay>();
         confirmed
           .slice()
@@ -62,6 +58,11 @@ export default function ProPlanning() {
         {days === null ? (
           <View style={s.loading}>
             <ActivityIndicator color={colors.proInk} />
+          </View>
+        ) : days.length === 0 ? (
+          <View style={s.emptyBox}>
+            <Text style={s.emptyTitle}>Aucune mission planifiée</Text>
+            <Text style={s.emptyText}>Vos réservations confirmées apparaîtront ici.</Text>
           </View>
         ) : (
           days.map((day) => (
@@ -105,6 +106,9 @@ const s = StyleSheet.create({
   lead: { fontFamily: font.body, fontSize: 14, color: colors.muted, marginTop: 6 },
   scroll: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 28 },
   loading: { paddingTop: 60, alignItems: 'center' },
+  emptyBox: { paddingTop: 70, alignItems: 'center', paddingHorizontal: 30 },
+  emptyTitle: { fontFamily: font.displaySemi, fontSize: 18, color: colors.ink, marginBottom: 8 },
+  emptyText: { fontFamily: font.body, fontSize: 14, color: colors.muted, textAlign: 'center', lineHeight: 21 },
   dayLabel: { fontFamily: font.displaySemi, fontSize: 15, color: colors.proInk, marginBottom: 12 },
   row: { flexDirection: 'row', gap: 14 },
   railCol: { width: 14, alignItems: 'center' },

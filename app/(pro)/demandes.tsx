@@ -5,7 +5,7 @@ import { useFocusEffect } from 'expo-router';
 import { CalendarDays, MapPin, Check, X, Inbox } from 'lucide-react-native';
 import { colors, font } from '../../theme/colors';
 import { initials } from '../../lib/data';
-import { getProBookings, updateBookingStatus, formatDate, seedProRequests } from '../../lib/api';
+import { getProBookings, updateBookingStatus, formatDate } from '../../lib/api';
 
 type Status = 'pending' | 'accepted' | 'refused';
 type Card = {
@@ -28,31 +28,17 @@ export default function ProDemandes() {
       getProBookings().then((bookings) => {
         if (!active) return;
         const pending = bookings.filter((b) => b.status === 'PENDING');
-        if (pending.length > 0) {
-          setCards(
-            pending.map((b) => ({
-              id: b.id,
-              client: b.client?.name ?? 'Client',
-              service: b.service,
-              datetime: formatDate(b.date),
-              city: '',
-              price: b.price + b.commission,
-              live: true,
-            })),
-          );
-        } else {
-          setCards(
-            seedProRequests.map((r) => ({
-              id: r.id,
-              client: r.client,
-              service: r.service,
-              datetime: `${r.date} · ${r.time}`,
-              city: r.city,
-              price: r.price,
-              live: false,
-            })),
-          );
-        }
+        setCards(
+          pending.map((b) => ({
+            id: b.id,
+            client: b.client?.name ?? 'Client',
+            service: b.service,
+            datetime: formatDate(b.date),
+            city: '',
+            price: b.price + b.commission,
+            live: true,
+          })),
+        );
       });
       return () => {
         active = false;
