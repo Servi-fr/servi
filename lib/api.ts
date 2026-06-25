@@ -252,6 +252,8 @@ export type BookingRow = {
   price: number;
   commission: number;
   status: BookingStatus;
+  address?: string | null;
+  notes?: string | null;
   clientId: string;
   prestataireId: string;
   client?: { name: string | null } | null;
@@ -265,6 +267,8 @@ export type NewBooking = {
   durationMin: number;
   price: number;
   commission: number;
+  address?: string;
+  notes?: string;
 };
 
 export async function createBooking(b: NewBooking): Promise<{ ok: boolean; error?: string; id?: string }> {
@@ -282,6 +286,8 @@ export async function createBooking(b: NewBooking): Promise<{ ok: boolean; error
       duration: b.durationMin,
       price: b.price,
       commission: b.commission,
+      address: b.address ?? null,
+      notes: b.notes ?? null,
       status: 'PENDING',
       paymentStatus: 'PENDING',
       updatedAt: nowISO(),
@@ -300,7 +306,7 @@ export async function getMyBookings(): Promise<BookingRow[]> {
     const { data, error } = await supabase
       .from('Booking')
       .select(
-        'id,service,date,duration,price,commission,status,clientId,prestataireId,prestataire:User!Booking_prestataireId_fkey(name)',
+        'id,service,date,duration,price,commission,status,address,notes,clientId,prestataireId,prestataire:User!Booking_prestataireId_fkey(name)',
       )
       .eq('clientId', uid)
       .order('date', { ascending: false });
@@ -318,7 +324,7 @@ export async function getProBookings(): Promise<BookingRow[]> {
     const { data, error } = await supabase
       .from('Booking')
       .select(
-        'id,service,date,duration,price,commission,status,clientId,prestataireId,client:User!Booking_clientId_fkey(name)',
+        'id,service,date,duration,price,commission,status,address,notes,clientId,prestataireId,client:User!Booking_clientId_fkey(name)',
       )
       .eq('prestataireId', uid)
       .order('date', { ascending: true });
@@ -334,7 +340,7 @@ export async function getBookingById(id: string): Promise<BookingRow | null> {
     const { data } = await supabase
       .from('Booking')
       .select(
-        'id,service,date,duration,price,commission,status,clientId,prestataireId,prestataire:User!Booking_prestataireId_fkey(name),client:User!Booking_clientId_fkey(name)',
+        'id,service,date,duration,price,commission,status,address,notes,clientId,prestataireId,prestataire:User!Booking_prestataireId_fkey(name),client:User!Booking_clientId_fkey(name)',
       )
       .eq('id', id)
       .maybeSingle();

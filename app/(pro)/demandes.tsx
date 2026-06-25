@@ -34,7 +34,7 @@ export default function ProDemandes() {
             client: b.client?.name ?? 'Client',
             service: b.service,
             datetime: formatDate(b.date),
-            city: '',
+            city: b.address ?? '',
             price: b.price + b.commission,
             live: true,
           })),

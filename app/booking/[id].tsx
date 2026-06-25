@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { CalendarDays, User, Check, X, MessageCircle, Star, Briefcase } from 'lucide-react-native';
+import { CalendarDays, User, Check, X, MessageCircle, Star, Briefcase, MapPin } from 'lucide-react-native';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { StatusBadge } from '../../components/StatusBadge';
 import { colors, font } from '../../theme/colors';
@@ -111,6 +111,26 @@ export default function BookingDetail() {
           </View>
         </View>
 
+        {/* Lieu d'intervention + précisions */}
+        {!!b.address && (
+          <View style={s.infoBlock}>
+            <View style={s.infoHead}>
+              <MapPin size={15} color={colors.link} />
+              <Text style={s.infoLabel}>Lieu d'intervention</Text>
+            </View>
+            <Text style={s.infoText}>{b.address}</Text>
+          </View>
+        )}
+        {!!b.notes && (
+          <View style={s.infoBlock}>
+            <View style={s.infoHead}>
+              <MessageCircle size={15} color={colors.link} />
+              <Text style={s.infoLabel}>Précisions du client</Text>
+            </View>
+            <Text style={s.infoText}>{b.notes}</Text>
+          </View>
+        )}
+
         {/* Contacter */}
         <Pressable style={s.secondary} onPress={() => router.push(`/chat/${b.id}`)}>
           <MessageCircle size={18} color={colors.link} />
@@ -209,6 +229,11 @@ const s = StyleSheet.create({
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
   totalLabel: { fontFamily: font.semi, fontSize: 15, color: colors.ink },
   totalValue: { fontFamily: font.display, fontSize: 20, color: colors.ink },
+
+  infoBlock: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 16, padding: 16, marginTop: 12 },
+  infoHead: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 7 },
+  infoLabel: { fontFamily: font.semi, fontSize: 13, color: colors.muted },
+  infoText: { fontFamily: font.body, fontSize: 15, color: colors.ink, lineHeight: 21 },
 
   secondary: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 16, paddingVertical: 14, borderRadius: 14, borderWidth: 1, borderColor: colors.line3, backgroundColor: colors.surface },
   secondaryText: { fontFamily: font.semi, fontSize: 15, color: colors.link },

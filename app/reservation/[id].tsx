@@ -20,7 +20,7 @@ import { getProvider as seedProvider, initials, type Provider } from '../../lib/
 import { createBooking, getProviderById, isSlotTaken, sendMessage } from '../../lib/api';
 import { config } from '../../lib/config';
 import { payForBooking } from '../../lib/payments';
-import { checkInPerimeter } from '../../lib/geo';
+import { searchAddresses, distanceToZoneKm, type AddressSuggestion } from '../../lib/geo';
 
 const WD = ['Dim.', 'Lun.', 'Mar.', 'Mer.', 'Jeu.', 'Ven.', 'Sam.'];
 const SLOTS = ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00'];
@@ -57,8 +57,35 @@ export default function ReservationScreen() {
   const [dayIdx, setDayIdx] = useState(0);
   const [slot, setSlot] = useState<string | null>(null);
   const [address, setAddress] = useState('');
+  const [selected, setSelected] = useState<AddressSuggestion | null>(null);
+  const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
+  const [searching, setSearching] = useState(false);
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Autocomplétion d'adresse (BAN), déclenchée à la frappe tant qu'aucune n'est validée.
+  useEffect(() => {
+    if (selected) return;
+    const q = address.trim();
+    if (q.length < 3) {
+      setSuggestions([]);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    const t = setTimeout(async () => {
+      const res = await searchAddresses(q);
+      setSuggestions(res);
+      setSearching(false);
+    }, 350);
+    return () => clearTimeout(t);
+  }, [address, selected]);
+
+  function pickAddress(a: AddressSuggestion) {
+    setSelected(a);
+    setAddress(a.label);
+    setSuggestions([]);
+  }
 
   if (loadingP && !p) {
     return (
@@ -85,7 +112,7 @@ export default function ReservationScreen() {
   const svc = p.services[serviceIdx];
   const fee = Math.round(svc.price * FEE_RATE);
   const total = svc.price + fee;
-  const ready = slot !== null && address.trim().length > 3;
+  const ready = slot !== null && selected !== null;
   const chosenDay = days[dayIdx];
 
   function buildDate() {
@@ -106,6 +133,8 @@ export default function ReservationScreen() {
       durationMin: 60,
       price: svc.price,
       commission: fee,
+      address: selected?.label ?? address.trim(),
+      notes: notes.trim() || undefined,
     });
     if (result.ok && result.id && askMessage) {
       await sendMessage(result.id, askMessage);
@@ -130,19 +159,19 @@ export default function ReservationScreen() {
   }
 
   async function confirm() {
-    if (!ready || !p || submitting) return;
+    if (!ready || !p || submitting || !selected) return;
     setSubmitting(true);
     const d = buildDate();
 
-    // Vérifs : l'adresse est-elle dans la zone du prestataire ? le créneau est-il libre ?
-    const [perim, taken] = await Promise.all([
-      p.city ? checkInPerimeter(address.trim(), p.city, p.radiusKm ?? 15) : Promise.resolve({ ok: true as boolean }),
+    // Vérifs : l'adresse (déjà validée) est-elle dans la zone du prestataire ? le créneau est-il libre ?
+    const [dist, taken] = await Promise.all([
+      p.city ? distanceToZoneKm({ lat: selected.lat, lng: selected.lng }, p.city) : Promise.resolve(null),
       isSlotTaken(p.id, d.toISOString()),
     ]);
 
     const issues: string[] = [];
-    if (perim.ok === false) {
-      issues.push(`l'adresse est à ~${(perim as any).distanceKm} km (hors de la zone de ${p.radiusKm ?? 15} km)`);
+    if (dist !== null && dist > (p.radiusKm ?? 15)) {
+      issues.push(`l'adresse est à ~${Math.round(dist)} km (hors de la zone de ${p.radiusKm ?? 15} km)`);
     }
     if (taken) issues.push('ce créneau est déjà réservé');
 
@@ -235,18 +264,52 @@ export default function ReservationScreen() {
             })}
           </View>
 
-          {/* Adresse */}
+          {/* Adresse — autocomplétion BAN, sélection obligatoire */}
           <Text style={s.label}>Adresse d'intervention</Text>
-          <View style={s.inputWrap}>
-            <MapPin size={18} color={colors.faint} />
+          <View style={[s.inputWrap, selected && s.inputWrapOk]}>
+            <MapPin size={18} color={selected ? colors.okText : colors.faint} />
             <TextInput
               value={address}
-              onChangeText={setAddress}
-              placeholder="12 rue de la République, Paris"
+              onChangeText={(t) => {
+                setAddress(t);
+                setSelected(null);
+              }}
+              placeholder="Commencez à taper votre adresse…"
               placeholderTextColor={colors.faint}
               style={s.input}
+              autoCorrect={false}
+              autoCapitalize="none"
             />
+            {searching ? (
+              <ActivityIndicator size="small" color={colors.faint} />
+            ) : selected ? (
+              <Check size={18} color={colors.okText} />
+            ) : null}
           </View>
+
+          {!selected && suggestions.length > 0 && (
+            <View style={s.suggestBox}>
+              {suggestions.map((a, i) => (
+                <Pressable
+                  key={a.label + i}
+                  style={[s.suggestRow, i > 0 && s.suggestBorder]}
+                  onPress={() => pickAddress(a)}
+                >
+                  <MapPin size={15} color={colors.faint} />
+                  <Text style={s.suggestText} numberOfLines={1}>
+                    {a.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
+
+          {!selected && !searching && suggestions.length === 0 && address.trim().length >= 3 && (
+            <Text style={s.addrHint}>Aucune adresse trouvée — vérifiez l'orthographe.</Text>
+          )}
+          {!selected && address.trim().length < 3 && (
+            <Text style={s.addrHint}>Choisissez une adresse dans la liste pour la valider.</Text>
+          )}
 
           {/* Notes */}
           <Text style={s.label}>Précisions (optionnel)</Text>
@@ -335,7 +398,13 @@ const s = StyleSheet.create({
   slotTextOn: { color: '#fff' },
 
   inputWrap: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line3, borderRadius: 13, paddingHorizontal: 14 },
+  inputWrapOk: { borderColor: colors.okText, backgroundColor: colors.okBg },
   input: { flex: 1, paddingVertical: 13, fontFamily: font.body, fontSize: 15, color: colors.ink },
+  suggestBox: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line3, borderRadius: 13, marginTop: 8, overflow: 'hidden' },
+  suggestRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 13, paddingHorizontal: 14 },
+  suggestBorder: { borderTopWidth: 1, borderTopColor: colors.line },
+  suggestText: { flex: 1, fontFamily: font.body, fontSize: 14, color: colors.ink },
+  addrHint: { fontFamily: font.body, fontSize: 12.5, color: colors.faint, marginTop: 8 },
   textarea: { minHeight: 80, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line3, borderRadius: 13, padding: 14, fontFamily: font.body, fontSize: 15, color: colors.ink, textAlignVertical: 'top' },
 
   summary: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 16, padding: 16, marginTop: 22 },
