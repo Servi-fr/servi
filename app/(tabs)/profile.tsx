@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LogOut, CalendarDays, CreditCard, Heart, ChevronRight, ArrowLeftRight, FileText, MessageCircle, type LucideIcon } from 'lucide-react-native';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '../../lib/supabase';
 import { colors, font } from '../../theme/colors';
-import { getMyProviderProfile } from '../../lib/api';
+import { getMyProviderProfile, getMyProfile } from '../../lib/api';
 
 const items: { label: string; Icon: LucideIcon; route?: string }[] = [
   { label: 'Mes réservations', Icon: CalendarDays, route: '/bookings' },
@@ -20,10 +20,12 @@ export default function Profile() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [isProvider, setIsProvider] = useState(false);
+  const [image, setImage] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
     getMyProviderProfile().then((p) => setIsProvider(!!p));
+    getMyProfile().then((p) => setImage(p?.image ?? null));
   }, []);
 
   async function logout() {
@@ -46,9 +48,13 @@ export default function Profile() {
         <Text style={s.h1}>Profil</Text>
 
         <Pressable style={s.userCard} onPress={() => router.push('/profile-edit')}>
-          <View style={s.avatar}>
-            <Text style={s.avatarText}>{initials}</Text>
-          </View>
+          {image ? (
+            <Image source={{ uri: image }} style={s.avatar} />
+          ) : (
+            <View style={s.avatar}>
+              <Text style={s.avatarText}>{initials}</Text>
+            </View>
+          )}
           <View style={{ flex: 1 }}>
             <Text style={s.name}>{name}</Text>
             <Text style={s.email}>{user?.email}</Text>

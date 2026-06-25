@@ -135,6 +135,7 @@ export type MyProfile = {
   lastName: string | null;
   address: string | null;
   phone: string | null;
+  image: string | null;
   role: Role;
 };
 
@@ -144,7 +145,7 @@ export async function getMyProfile(): Promise<MyProfile | null> {
   try {
     const { data } = await supabase
       .from('User')
-      .select('id,name,email,firstName,lastName,address,phone,role')
+      .select('id,name,email,firstName,lastName,address,phone,image,role')
       .eq('id', uid)
       .maybeSingle();
     return (data as MyProfile) ?? null;
@@ -154,7 +155,7 @@ export async function getMyProfile(): Promise<MyProfile | null> {
 }
 
 export async function updateMyProfile(
-  p: Partial<Pick<MyProfile, 'firstName' | 'lastName' | 'address' | 'phone' | 'name'>>,
+  p: Partial<Pick<MyProfile, 'firstName' | 'lastName' | 'address' | 'phone' | 'name' | 'image'>>,
 ): Promise<{ ok: boolean; error?: string }> {
   const uid = await getUid();
   if (!uid) return { ok: false, error: 'not-auth' };
@@ -471,6 +472,88 @@ export async function sendMessage(bookingId: string, content: string): Promise<{
     updatedAt: nowISO(),
   });
   return error ? { ok: false, error: error.message } : { ok: true };
+}
+
+// ============================================================
+//  Notifications & push
+// ============================================================
+export type Notif = {
+  id: string;
+  type: string;
+  title: string;
+  message: string | null;
+  read: boolean;
+  link: string | null;
+  createdAt: string;
+};
+
+export async function getNotifications(): Promise<Notif[]> {
+  const uid = await getUid();
+  if (!uid) return [];
+  try {
+    const { data } = await supabase
+      .from('Notification')
+      .select('id,type,title,message,read,link,createdAt')
+      .eq('userId', uid)
+      .order('createdAt', { ascending: false })
+      .limit(50);
+    return (data as Notif[]) ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function getUnreadCount(): Promise<number> {
+  const uid = await getUid();
+  if (!uid) return 0;
+  try {
+    const { count } = await supabase
+      .from('Notification')
+      .select('id', { count: 'exact', head: true })
+      .eq('userId', uid)
+      .eq('read', false);
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+export async function markAllNotificationsRead(): Promise<void> {
+  const uid = await getUid();
+  if (!uid) return;
+  try {
+    await supabase.from('Notification').update({ read: true, updatedAt: nowISO() }).eq('userId', uid).eq('read', false);
+  } catch {
+    /* ignore */
+  }
+}
+
+export async function savePushToken(token: string): Promise<void> {
+  const uid = await getUid();
+  if (!uid) return;
+  try {
+    await supabase.from('User').update({ pushToken: token, updatedAt: nowISO() }).eq('id', uid);
+  } catch {
+    /* ignore */
+  }
+}
+
+// Upload d'une photo de profil → bucket « avatars » → URL publique.
+export async function uploadAvatar(uri: string): Promise<{ ok: boolean; url?: string; error?: string }> {
+  const uid = await getUid();
+  if (!uid) return { ok: false, error: 'not-auth' };
+  try {
+    const arraybuffer = await fetch(uri).then((r) => r.arrayBuffer());
+    const path = `${uid}/avatar_${Date.now()}.jpg`;
+    const { error } = await supabase.storage
+      .from('avatars')
+      .upload(path, arraybuffer, { contentType: 'image/jpeg', upsert: true });
+    if (error) return { ok: false, error: error.message };
+    const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+    return { ok: true, url: data.publicUrl };
+  } catch (e: any) {
+    return { ok: false, error: e?.message ?? 'upload-failed' };
+  }
 }
 
 // ============================================================

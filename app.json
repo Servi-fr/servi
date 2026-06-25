@@ -35,7 +35,14 @@
         {
           "locationWhenInUsePermission": "SERVI utilise votre position pour afficher les prestataires proches de vous."
         }
-      ]
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "SERVI accède à vos photos pour définir votre photo de profil."
+        }
+      ],
+      "expo-notifications"
     ],
     "scheme": "serviapp",
     "newArchEnabled": true,

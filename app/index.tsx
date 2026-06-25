@@ -3,6 +3,7 @@ import { View, ActivityIndicator } from 'react-native';
 import { Redirect } from 'expo-router';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { registerForPush } from '../lib/push';
 import { colors } from '../theme/colors';
 
 export default function Index() {
@@ -13,6 +14,10 @@ export default function Index() {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => setSession(s));
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (session) registerForPush();
+  }, [session]);
 
   if (session === undefined) {
     return (

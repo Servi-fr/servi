@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { TrendingUp, Star, CheckCircle2, Clock, ChevronRight, ArrowUpRight } from 'lucide-react-native';
 import { colors, font } from '../../theme/colors';
+import { NotifBell } from '../../components/NotifBell';
 import { initials } from '../../lib/data';
 import { getProBookings, getMyProfile, seedProPlanning, seedProRequests, type BookingRow } from '../../lib/api';
 
@@ -51,8 +52,11 @@ export default function ProDashboard() {
             <Text style={s.hello}>Bonjour,</Text>
             <Text style={s.name}>{name}</Text>
           </View>
-          <View style={s.avatar}>
-            <Text style={s.avatarText}>{initials(name)}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+            <NotifBell />
+            <View style={s.avatar}>
+              <Text style={s.avatarText}>{initials(name)}</Text>
+            </View>
           </View>
         </View>
 

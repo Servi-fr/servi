@@ -3,6 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Search } from 'lucide-react-native';
 import { Logo } from '../../components/Logo';
+import { NotifBell } from '../../components/NotifBell';
 import { colors, font } from '../../theme/colors';
 import { families } from '../../lib/data';
 
@@ -13,6 +14,7 @@ export default function Home() {
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         <View style={s.topbar}>
           <Logo size={21} />
+          <NotifBell />
         </View>
 
         <Text style={s.h1}>Le bon prestataire,{'\n'}près de chez vous.</Text>
@@ -54,7 +56,7 @@ const GAP = 12;
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.surface },
   scroll: { paddingHorizontal: 20, paddingBottom: 28 },
-  topbar: { paddingVertical: 12 },
+  topbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 },
   h1: { fontFamily: font.display, fontSize: 30, color: colors.ink, lineHeight: 36, marginTop: 6, letterSpacing: -0.5 },
   lead: { fontFamily: font.body, fontSize: 15, color: colors.muted, marginTop: 10, lineHeight: 22 },
   searchBar: {
