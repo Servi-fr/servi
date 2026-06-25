@@ -17,7 +17,7 @@ import { Check, MapPin } from 'lucide-react-native';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { colors, font } from '../../theme/colors';
 import { getProvider as seedProvider, initials, type Provider } from '../../lib/data';
-import { createBooking, getProviderById, isSlotTaken, sendMessage } from '../../lib/api';
+import { createBooking, getProviderById, getUid, isSlotTaken, sendMessage } from '../../lib/api';
 import { config } from '../../lib/config';
 import { payForBooking } from '../../lib/payments';
 import { searchAddresses, distanceToZoneKm, type AddressSuggestion } from '../../lib/geo';
@@ -31,6 +31,7 @@ export default function ReservationScreen() {
   const router = useRouter();
   const [p, setP] = useState<Provider | undefined>(() => seedProvider(id));
   const [loadingP, setLoadingP] = useState(!p);
+  const [myUid, setMyUid] = useState<string | null>(null);
   useEffect(() => {
     let active = true;
     getProviderById(id).then((r) => {
@@ -38,6 +39,7 @@ export default function ReservationScreen() {
       if (r) setP(r);
       setLoadingP(false);
     });
+    getUid().then((u) => active && setMyUid(u));
     return () => {
       active = false;
     };
@@ -114,6 +116,16 @@ export default function ReservationScreen() {
   const total = svc.price + fee;
   const ready = slot !== null && selected !== null;
   const chosenDay = days[dayIdx];
+  const isSelf = !!myUid && p.id === myUid;
+
+  // Un créneau d'aujourd'hui déjà passé n'est pas réservable.
+  function slotIsPast(time: string): boolean {
+    if (dayIdx !== 0) return false;
+    const [h, m] = time.split(':').map(Number);
+    const sd = new Date();
+    sd.setHours(h, m, 0, 0);
+    return sd.getTime() <= Date.now();
+  }
 
   function buildDate() {
     const d = new Date();
@@ -136,13 +148,25 @@ export default function ReservationScreen() {
       address: selected?.label ?? address.trim(),
       notes: notes.trim() || undefined,
     });
-    if (result.ok && result.id && askMessage) {
+    // Échec → on le DIT (plus de faux « succès »).
+    if (!result.ok) {
+      setSubmitting(false);
+      const msg =
+        result.error === 'not-authenticated'
+          ? 'Vous devez être connecté pour réserver.'
+          : result.error === 'demo-local'
+            ? "Ce prestataire de démonstration n'est pas réservable."
+            : `La réservation n'a pas pu être créée. Réessayez.${result.error ? `\n\n(${result.error})` : ''}`;
+      Alert.alert('Réservation impossible', msg);
+      return;
+    }
+    if (result.id && askMessage) {
       await sendMessage(result.id, askMessage);
       setSubmitting(false);
       router.replace(`/chat/${result.id}`);
       return;
     }
-    if (config.paymentsEnabled && result.ok && result.id) {
+    if (config.paymentsEnabled && result.id) {
       await payForBooking(result.id);
     }
     setSubmitting(false);
@@ -163,26 +187,38 @@ export default function ReservationScreen() {
     setSubmitting(true);
     const d = buildDate();
 
-    // Vérifs : l'adresse (déjà validée) est-elle dans la zone du prestataire ? le créneau est-il libre ?
+    // 1) Créneau dans le passé → impossible.
+    if (d.getTime() <= Date.now()) {
+      setSubmitting(false);
+      Alert.alert('Créneau passé', 'Ce créneau est déjà passé. Choisissez un horaire à venir.');
+      return;
+    }
+
+    // Vérifs en parallèle : zone (adresse déjà validée) + créneau déjà pris.
     const [dist, taken] = await Promise.all([
       p.city ? distanceToZoneKm({ lat: selected.lat, lng: selected.lng }, p.city) : Promise.resolve(null),
       isSlotTaken(p.id, d.toISOString()),
     ]);
 
-    const issues: string[] = [];
-    if (dist !== null && dist > (p.radiusKm ?? 15)) {
-      issues.push(`l'adresse est à ~${Math.round(dist)} km (hors de la zone de ${p.radiusKm ?? 15} km)`);
+    // 2) Créneau déjà réservé chez ce prestataire → BLOCAGE STRICT (pas de double-booking).
+    if (taken) {
+      setSubmitting(false);
+      Alert.alert(
+        'Créneau indisponible',
+        "Ce prestataire a déjà une réservation sur ce créneau. Merci d'en choisir un autre.",
+      );
+      return;
     }
-    if (taken) issues.push('ce créneau est déjà réservé');
 
-    if (issues.length > 0) {
+    // 3) Hors zone → on propose une demande par message (non bloquant).
+    if (dist !== null && dist > (p.radiusKm ?? 15)) {
       setSubmitting(false);
       const askMessage =
         `Bonjour, je souhaiterais réserver « ${svc.label} » le ${chosenDay.label} ${chosenDay.num} à ${slot}, ` +
-        `à l'adresse : ${address.trim()}. Est-ce que cela vous conviendrait ? (${issues.join(' ; ')})`;
+        `à l'adresse : ${address.trim()}. C'est à ~${Math.round(dist)} km (hors de votre zone de ${p.radiusKm ?? 15} km). Est-ce envisageable ?`;
       Alert.alert(
-        'À confirmer avec le prestataire',
-        `Attention : ${issues.join(' et ')}. Voulez-vous lui envoyer une demande par message pour savoir si ça lui convient ?`,
+        'Hors de la zone du prestataire',
+        `L'adresse est à ~${Math.round(dist)} km (zone d'intervention : ${p.radiusKm ?? 15} km). Envoyer une demande par message pour savoir si ça lui convient ?`,
         [
           { text: 'Modifier', style: 'cancel' },
           {
@@ -220,6 +256,15 @@ export default function ReservationScreen() {
             </View>
           </View>
 
+          {isSelf && (
+            <View style={s.selfBanner}>
+              <Text style={s.selfBannerText}>
+                ℹ️ C'est votre propre profil prestataire : la demande vous sera envoyée à vous-même (pratique pour
+                tester l'espace prestataire).
+              </Text>
+            </View>
+          )}
+
           {/* Prestation */}
           <Text style={s.label}>Prestation</Text>
           <View style={s.box}>
@@ -243,7 +288,14 @@ export default function ReservationScreen() {
             {days.map((d) => {
               const active = d.key === dayIdx;
               return (
-                <Pressable key={d.key} style={[s.dayChip, active && s.dayChipOn]} onPress={() => setDayIdx(d.key)}>
+                <Pressable
+                  key={d.key}
+                  style={[s.dayChip, active && s.dayChipOn]}
+                  onPress={() => {
+                    setDayIdx(d.key);
+                    setSlot(null);
+                  }}
+                >
                   <Text style={[s.dayWd, active && s.dayTextOn]}>{d.label}</Text>
                   <Text style={[s.dayNum, active && s.dayTextOn]}>{d.num}</Text>
                 </Pressable>
@@ -255,14 +307,23 @@ export default function ReservationScreen() {
           <Text style={s.label}>Créneau</Text>
           <View style={s.slotGrid}>
             {SLOTS.map((t) => {
+              const past = slotIsPast(t);
               const active = t === slot;
               return (
-                <Pressable key={t} style={[s.slot, active && s.slotOn]} onPress={() => setSlot(t)}>
-                  <Text style={[s.slotText, active && s.slotTextOn]}>{t}</Text>
+                <Pressable
+                  key={t}
+                  style={[s.slot, active && s.slotOn, past && s.slotPast]}
+                  disabled={past}
+                  onPress={() => setSlot(t)}
+                >
+                  <Text style={[s.slotText, active && s.slotTextOn, past && s.slotTextPast]}>{t}</Text>
                 </Pressable>
               );
             })}
           </View>
+          {dayIdx === 0 && SLOTS.every((t) => slotIsPast(t)) && (
+            <Text style={s.addrHint}>Plus de créneau disponible aujourd'hui — choisissez un autre jour.</Text>
+          )}
 
           {/* Adresse — autocomplétion BAN, sélection obligatoire */}
           <Text style={s.label}>Adresse d'intervention</Text>
@@ -394,8 +455,10 @@ const s = StyleSheet.create({
   slotGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   slot: { width: '30.5%', paddingVertical: 13, borderRadius: 13, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line3, alignItems: 'center' },
   slotOn: { backgroundColor: colors.blue, borderColor: colors.blue },
+  slotPast: { opacity: 0.4 },
   slotText: { fontFamily: font.semi, fontSize: 14, color: colors.ink },
   slotTextOn: { color: '#fff' },
+  slotTextPast: { color: colors.faint, textDecorationLine: 'line-through' },
 
   inputWrap: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line3, borderRadius: 13, paddingHorizontal: 14 },
   inputWrapOk: { borderColor: colors.okText, backgroundColor: colors.okBg },
@@ -405,6 +468,8 @@ const s = StyleSheet.create({
   suggestBorder: { borderTopWidth: 1, borderTopColor: colors.line },
   suggestText: { flex: 1, fontFamily: font.body, fontSize: 14, color: colors.ink },
   addrHint: { fontFamily: font.body, fontSize: 12.5, color: colors.faint, marginTop: 8 },
+  selfBanner: { backgroundColor: colors.okBg, borderRadius: 12, padding: 12, marginTop: 10 },
+  selfBannerText: { fontFamily: font.body, fontSize: 12.5, color: colors.okText, lineHeight: 18 },
   textarea: { minHeight: 80, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line3, borderRadius: 13, padding: 14, fontFamily: font.body, fontSize: 15, color: colors.ink, textAlignVertical: 'top' },
 
   summary: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 16, padding: 16, marginTop: 22 },
