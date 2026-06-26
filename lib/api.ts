@@ -180,18 +180,27 @@ export type ProviderProfile = {
   certifications: string | null;
   skills: string[] | null;
   rating: number | null;
+  siret?: string | null;
 };
 
 export async function getMyProviderProfile(): Promise<ProviderProfile | null> {
   const uid = await getUid();
   if (!uid) return null;
   try {
-    const { data } = await supabase
+    // Résilient : tente avec siret, repli sans la colonne si la migration n'est pas encore passée.
+    let res = await supabase
       .from('PrestataireProfile')
-      .select('id,service,hourlyRate,description,zone,radiusKm,certifications,skills,rating')
+      .select('id,service,hourlyRate,description,zone,radiusKm,certifications,skills,rating,siret')
       .eq('userId', uid)
       .maybeSingle();
-    return (data as ProviderProfile) ?? null;
+    if (res.error) {
+      res = await supabase
+        .from('PrestataireProfile')
+        .select('id,service,hourlyRate,description,zone,radiusKm,certifications,skills,rating')
+        .eq('userId', uid)
+        .maybeSingle();
+    }
+    return (res.data as ProviderProfile) ?? null;
   } catch {
     return null;
   }
@@ -204,37 +213,29 @@ export async function upsertMyProviderProfile(p: {
   zone?: string;
   radiusKm?: number;
   certifications?: string;
+  siret?: string;
 }): Promise<{ ok: boolean; error?: string }> {
   const uid = await getUid();
   if (!uid) return { ok: false, error: 'not-auth' };
   const existing = await getMyProviderProfile();
+  const base = {
+    service: p.service,
+    hourlyRate: p.hourlyRate,
+    description: p.description ?? null,
+    zone: p.zone ?? null,
+    radiusKm: p.radiusKm ?? null,
+    certifications: p.certifications ?? null,
+  };
+  const withSiret = { ...base, siret: p.siret ?? null };
   if (existing) {
-    const { error } = await supabase
-      .from('PrestataireProfile')
-      .update({
-        service: p.service,
-        hourlyRate: p.hourlyRate,
-        description: p.description ?? null,
-        zone: p.zone ?? null,
-        radiusKm: p.radiusKm ?? null,
-        certifications: p.certifications ?? null,
-      })
-      .eq('userId', uid);
+    // Résilient : tente avec siret, repli sans la colonne si la migration n'est pas passée.
+    let { error } = await supabase.from('PrestataireProfile').update(withSiret).eq('userId', uid);
+    if (error) ({ error } = await supabase.from('PrestataireProfile').update(base).eq('userId', uid));
     if (error) return { ok: false, error: error.message };
   } else {
-    const { error } = await supabase.from('PrestataireProfile').insert({
-      id: genId('pp'),
-      userId: uid,
-      service: p.service,
-      hourlyRate: p.hourlyRate,
-      description: p.description ?? null,
-      zone: p.zone ?? null,
-      radiusKm: p.radiusKm ?? null,
-      certifications: p.certifications ?? null,
-      skills: [],
-      totalEarned: 0,
-      rating: 0,
-    });
+    const insBase = { id: genId('pp'), userId: uid, ...base, skills: [], totalEarned: 0, rating: 0 };
+    let { error } = await supabase.from('PrestataireProfile').insert({ ...insBase, siret: p.siret ?? null });
+    if (error) ({ error } = await supabase.from('PrestataireProfile').insert(insBase));
     if (error) return { ok: false, error: error.message };
   }
   await supabase.from('User').update({ role: 'PRESTATAIRE', updatedAt: nowISO() }).eq('id', uid);

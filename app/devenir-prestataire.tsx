@@ -6,6 +6,7 @@ import { ScreenHeader } from '../components/ScreenHeader';
 import { colors, font } from '../theme/colors';
 import { categories } from '../lib/data';
 import { getMyProviderProfile, upsertMyProviderProfile } from '../lib/api';
+import { searchCompany, type CompanyResult } from '../lib/company';
 
 export default function DevenirPrestataire() {
   const router = useRouter();
@@ -19,6 +20,10 @@ export default function DevenirPrestataire() {
   const [radius, setRadius] = useState(10);
   const [certifications, setCertifications] = useState('');
   const [description, setDescription] = useState('');
+  const [company, setCompany] = useState('');
+  const [siret, setSiret] = useState('');
+  const [coResults, setCoResults] = useState<CompanyResult[]>([]);
+  const [searchingCo, setSearchingCo] = useState(false);
 
   useEffect(() => {
     getMyProviderProfile().then((p) => {
@@ -30,10 +35,34 @@ export default function DevenirPrestataire() {
         setRadius(p.radiusKm ?? 10);
         setCertifications(p.certifications ?? '');
         setDescription(p.description ?? '');
+        if (p.siret) setSiret(p.siret);
       }
       setLoading(false);
     });
   }, []);
+
+  // Recherche d'entreprise (SIRET ou nom) via l'API gouv → auto-remplit.
+  useEffect(() => {
+    if (siret) return;
+    const q = company.trim();
+    if (q.length < 3) {
+      setCoResults([]);
+      return;
+    }
+    setSearchingCo(true);
+    const t = setTimeout(async () => {
+      setCoResults(await searchCompany(q));
+      setSearchingCo(false);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [company, siret]);
+
+  function pickCompany(c: CompanyResult) {
+    setSiret(c.siret);
+    setCompany(c.name);
+    setCoResults([]);
+    if (c.city && zone.trim().length < 2) setZone(c.city);
+  }
 
   const rateNum = parseInt(rate, 10);
   const ready = service.length > 0 && rateNum > 0 && zone.trim().length > 1;
@@ -48,6 +77,7 @@ export default function DevenirPrestataire() {
       zone: zone.trim(),
       radiusKm: radius,
       certifications: certifications.trim(),
+      siret: siret || undefined,
     });
     setSaving(false);
     if (!r.ok) {
@@ -73,6 +103,35 @@ export default function DevenirPrestataire() {
                 recevrez ensuite des demandes de réservation.
               </Text>
             )}
+
+            <Text style={s.label}>Votre entreprise (SIRET ou nom)</Text>
+            <TextInput
+              value={company}
+              onChangeText={(t) => {
+                setCompany(t);
+                setSiret('');
+              }}
+              placeholder="N° SIRET ou nom de l'entreprise"
+              placeholderTextColor={colors.faint}
+              autoCapitalize="none"
+              autoCorrect={false}
+              style={s.input}
+            />
+            {searchingCo && <Text style={s.coHint}>Recherche…</Text>}
+            {!siret && coResults.length > 0 && (
+              <View style={s.coBox}>
+                {coResults.map((c, i) => (
+                  <Pressable key={c.siret + i} style={[s.coRow, i > 0 && s.coBorder]} onPress={() => pickCompany(c)}>
+                    <Text style={s.coName} numberOfLines={1}>{c.name}</Text>
+                    <Text style={s.coMeta} numberOfLines={1}>
+                      {c.siret}
+                      {c.city ? ` · ${c.city}` : ''}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+            {!!siret && <Text style={s.siretOk}>✓ SIRET {siret} enregistré</Text>}
 
             <Text style={s.label}>Métier</Text>
             <View style={s.chips}>
@@ -163,6 +222,13 @@ const s = StyleSheet.create({
   chipText: { fontFamily: font.medium, fontSize: 13.5, color: colors.muted },
   chipTextOn: { color: '#fff' },
   input: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line3, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, fontFamily: font.body, fontSize: 15, color: colors.ink },
+  coHint: { fontFamily: font.body, fontSize: 12.5, color: colors.faint, marginTop: 6 },
+  coBox: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line3, borderRadius: 12, marginTop: 8, overflow: 'hidden' },
+  coRow: { paddingVertical: 11, paddingHorizontal: 14 },
+  coBorder: { borderTopWidth: 1, borderTopColor: colors.line },
+  coName: { fontFamily: font.semi, fontSize: 14, color: colors.ink },
+  coMeta: { fontFamily: font.body, fontSize: 12, color: colors.faint, marginTop: 1 },
+  siretOk: { fontFamily: font.semi, fontSize: 13, color: colors.okText, marginTop: 8 },
   textarea: { minHeight: 96, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line3, borderRadius: 12, padding: 14, fontFamily: font.body, fontSize: 15, color: colors.ink, textAlignVertical: 'top' },
   btn: { backgroundColor: colors.proInk, borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 24 },
   btnOff: { backgroundColor: colors.faint },
