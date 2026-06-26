@@ -112,6 +112,13 @@ export default function DevenirPrestataire() {
     setCompany(c.name);
     setCoResults([]);
     if (c.city && zone.trim().length < 2) setZone(c.city);
+    // Récupère les labels officiels à jour (RGE, Qualiopi…) et les ajoute aux certifications.
+    if (c.labels.length) {
+      setCertifications((cur) => {
+        const toAdd = c.labels.filter((l) => !cur.includes(l));
+        return toAdd.length ? [...toAdd, cur].filter(Boolean).join('\n').trim() : cur;
+      });
+    }
   }
 
   const rateNum = parseInt(rate, 10);

@@ -7,7 +7,17 @@ export type CompanyResult = {
   address: string;
   city: string;
   ape: string;
+  labels: string[]; // certifications officielles détectées (RGE, Qualiopi, Bio…)
 };
+
+// Labels officiels exposés par l'API (à jour) → libellés affichables.
+function companyLabels(complements: any): string[] {
+  const out: string[] = [];
+  if (complements?.est_rge) out.push('Certifié RGE');
+  if (complements?.est_qualiopi) out.push('Certifié Qualiopi');
+  if (complements?.est_bio) out.push('Certifié Bio (Agriculture Biologique)');
+  return out;
+}
 
 export async function searchCompany(query: string): Promise<CompanyResult[]> {
   const q = (query || '').trim();
@@ -24,6 +34,7 @@ export async function searchCompany(query: string): Promise<CompanyResult[]> {
       address: r.siege?.adresse ?? '',
       city: r.siege?.libelle_commune ?? '',
       ape: r.activite_principale ?? '',
+      labels: companyLabels(r.complements),
     }));
   } catch {
     return [];
