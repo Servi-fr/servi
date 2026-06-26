@@ -1,12 +1,12 @@
 import { useCallback, useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { TrendingUp, Star, CheckCircle2, Clock, ChevronRight, ArrowUpRight } from 'lucide-react-native';
+import { TrendingUp, Star, CheckCircle2, Clock, ChevronRight, ArrowUpRight, Megaphone } from 'lucide-react-native';
 import { colors, font } from '../../theme/colors';
 import { NotifBell } from '../../components/NotifBell';
 import { initials } from '../../lib/data';
-import { getProBookings, getMyProfile, type BookingRow } from '../../lib/api';
+import { getProBookings, getMyProfile, boostMyListing, isMyListingSponsored, type BookingRow } from '../../lib/api';
 
 function isToday(iso: string) {
   const d = new Date(iso);
@@ -22,12 +22,14 @@ export default function ProDashboard() {
   const router = useRouter();
   const [bookings, setBookings] = useState<BookingRow[] | null>(null);
   const [name, setName] = useState('Prestataire');
+  const [isSpon, setIsSpon] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
       getProBookings().then((b) => active && setBookings(b));
       getMyProfile().then((p) => active && p?.name && setName(p.name));
+      isMyListingSponsored().then((v) => active && setIsSpon(v));
       return () => {
         active = false;
       };
@@ -74,6 +76,24 @@ export default function ProDashboard() {
           <Kpi Icon={Star} value="—" label="Note" />
           <Kpi Icon={CheckCircle2} value={String(pendingCount)} label="En attente" />
         </View>
+
+        <Pressable
+          style={[s.boost, isSpon && s.boostOn]}
+          onPress={async () => {
+            if (isSpon) return;
+            const r = await boostMyListing();
+            if (r.ok) setIsSpon(true);
+            else Alert.alert('Mise en avant', 'Action impossible. Réessayez.');
+          }}
+        >
+          <Megaphone size={20} color={isSpon ? colors.okText : colors.proInk} />
+          <View style={{ flex: 1 }}>
+            <Text style={s.boostTitle}>{isSpon ? 'Fiche mise en avant ✓' : 'Mettre ma fiche en avant'}</Text>
+            <Text style={s.boostSub}>
+              {isSpon ? "Vous apparaissez « À la une » sur l'accueil." : "Apparaissez « À la une » sur l'accueil des clients."}
+            </Text>
+          </View>
+        </Pressable>
 
         {pendingCount > 0 && (
           <Pressable style={s.alert} onPress={() => router.push('/(pro)/demandes')}>
@@ -146,6 +166,10 @@ const s = StyleSheet.create({
   kpi: { flex: 1, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 16, paddingVertical: 16, alignItems: 'center', gap: 5 },
   kpiValue: { fontFamily: font.displaySemi, fontSize: 19, color: colors.proInk },
   kpiLabel: { fontFamily: font.body, fontSize: 11.5, color: colors.faint },
+  boost: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line3, borderRadius: 16, padding: 14, marginTop: 14 },
+  boostOn: { backgroundColor: colors.okBg, borderColor: colors.okBg },
+  boostTitle: { fontFamily: font.semi, fontSize: 15, color: colors.ink },
+  boostSub: { fontFamily: font.body, fontSize: 12.5, color: colors.muted, marginTop: 1 },
   alert: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line3, borderRadius: 16, padding: 14, marginTop: 14 },
   alertIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
   alertTitle: { fontFamily: font.semi, fontSize: 15, color: colors.ink },

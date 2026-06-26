@@ -685,3 +685,68 @@ export async function deleteMyAddress(id: string): Promise<{ ok: boolean }> {
   const { error } = await supabase.from('SavedAddress').delete().eq('id', id);
   return { ok: !error };
 }
+
+// ============================================================
+//  Demande de prestation (intake client + matchmaking)
+// ============================================================
+export async function createServiceRequest(r: {
+  category: string;
+  frequency?: string;
+  details?: string;
+  address?: string;
+  lat?: number;
+  lng?: number;
+}): Promise<{ ok: boolean; error?: string }> {
+  const uid = await getUid();
+  if (!uid) return { ok: false, error: 'not-auth' };
+  const { error } = await supabase.from('ServiceRequest').insert({
+    id: genId('req'),
+    userId: uid,
+    category: r.category,
+    frequency: r.frequency ?? null,
+    details: r.details ?? null,
+    address: r.address ?? null,
+    lat: r.lat ?? null,
+    lng: r.lng ?? null,
+  });
+  return error ? { ok: false, error: error.message } : { ok: true };
+}
+
+// ============================================================
+//  Annonces sponsorisées (B6)
+// ============================================================
+export async function getSponsoredProviders(): Promise<Provider[]> {
+  try {
+    const { data } = await supabase.from('SponsoredListing').select('prestataireId').eq('status', 'active');
+    if (!data || data.length === 0) return [];
+    const ids = new Set((data as any[]).map((r) => r.prestataireId));
+    const all = await getProviders();
+    return all.filter((p) => ids.has(p.id));
+  } catch {
+    return [];
+  }
+}
+
+export async function boostMyListing(category?: string, city?: string): Promise<{ ok: boolean; error?: string }> {
+  const uid = await getUid();
+  if (!uid) return { ok: false, error: 'not-auth' };
+  await supabase.from('SponsoredListing').delete().eq('prestataireId', uid); // évite les doublons
+  const { error } = await supabase.from('SponsoredListing').insert({
+    id: genId('spon'),
+    prestataireId: uid,
+    category: category ?? null,
+    city: city ?? null,
+  });
+  return error ? { ok: false, error: error.message } : { ok: true };
+}
+
+export async function isMyListingSponsored(): Promise<boolean> {
+  const uid = await getUid();
+  if (!uid) return false;
+  try {
+    const { data } = await supabase.from('SponsoredListing').select('id').eq('prestataireId', uid).eq('status', 'active').limit(1);
+    return !!data && data.length > 0;
+  } catch {
+    return false;
+  }
+}
