@@ -414,6 +414,20 @@ export async function getReviewsForProvider(userId: string): Promise<Review[]> {
   }
 }
 
+// Note moyenne d'un utilisateur (client OU prestataire), tous avis reçus confondus.
+export async function getUserRating(userId: string): Promise<{ avg: number; count: number } | null> {
+  if (!userId || userId.startsWith('p-')) return null;
+  try {
+    const { data } = await supabase.from('Review').select('rating').eq('toUserId', userId);
+    if (!data || data.length === 0) return null;
+    const count = data.length;
+    const avg = (data as any[]).reduce((s, r) => s + (r.rating ?? 0), 0) / count;
+    return { avg: Math.round(avg * 10) / 10, count };
+  } catch {
+    return null;
+  }
+}
+
 export async function createReview(input: {
   bookingId: string;
   toUserId: string;

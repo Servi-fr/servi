@@ -11,6 +11,7 @@ import {
   getUid,
   updateBookingStatus,
   createReview,
+  getUserRating,
   formatDate,
   type BookingRow,
   type BookingStatus,
@@ -28,6 +29,7 @@ export default function BookingDetail() {
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
   const [reviewSent, setReviewSent] = useState(false);
+  const [otherRating, setOtherRating] = useState<{ avg: number; count: number } | null>(null);
 
   async function load() {
     const [bk, u] = await Promise.all([getBookingById(id), getUid()]);
@@ -38,6 +40,11 @@ export default function BookingDetail() {
   useEffect(() => {
     load();
   }, [id]);
+  useEffect(() => {
+    if (!b || !uid) return;
+    const otherId = b.clientId === uid ? b.prestataireId : b.clientId;
+    getUserRating(otherId).then(setOtherRating);
+  }, [b, uid]);
 
   if (loading) {
     return (
@@ -80,7 +87,7 @@ export default function BookingDetail() {
   async function submitReview() {
     if (!b) return;
     setBusy(true);
-    const r = await createReview({ bookingId: b.id, toUserId: b.prestataireId, rating, comment: comment.trim() });
+    const r = await createReview({ bookingId: b.id, toUserId: amClient ? b.prestataireId : b.clientId, rating, comment: comment.trim() });
     setBusy(false);
     if (!r.ok) {
       Alert.alert('Erreur', "L'avis n'a pas pu être envoyé.");
@@ -99,7 +106,11 @@ export default function BookingDetail() {
         </View>
 
         <View style={s.card}>
-          <Row Icon={amClient ? Briefcase : User} label={amClient ? 'Prestataire' : 'Client'} value={otherName ?? '—'} />
+          <Row
+            Icon={amClient ? Briefcase : User}
+            label={amClient ? 'Prestataire' : 'Client'}
+            value={(otherName ?? '—') + (otherRating ? `   ★ ${otherRating.avg} (${otherRating.count})` : '')}
+          />
           <View style={s.divider} />
           <Row Icon={CalendarDays} label="Date" value={formatDate(b.date)} />
           <View style={s.divider} />
@@ -165,9 +176,9 @@ export default function BookingDetail() {
         )}
 
         {/* Avis client après prestation terminée */}
-        {amClient && b.status === 'COMPLETED' && !reviewSent && (
+        {(amClient || amPro) && b.status === 'COMPLETED' && !reviewSent && (
           <View style={s.reviewBox}>
-            <Text style={s.reviewTitle}>Votre avis</Text>
+            <Text style={s.reviewTitle}>{amClient ? 'Votre avis sur le prestataire' : 'Votre avis sur le client'}</Text>
             <View style={s.stars}>
               {[1, 2, 3, 4, 5].map((n) => (
                 <Pressable key={n} onPress={() => setRating(n)} hitSlop={6}>
