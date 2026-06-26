@@ -5,12 +5,14 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Star, MapPin, BadgeCheck, Check, Award } from 'lucide-react-native';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { colors, font } from '../../theme/colors';
+import { useBreakpoint, centeredContent } from '../../lib/responsive';
 import { getProvider as seedProvider, getCategory, sampleReviews, initials, type Provider } from '../../lib/data';
 import { getProviderById, getReviewsForProvider } from '../../lib/api';
 
 export default function ProviderScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { contentMaxWidth } = useBreakpoint();
   const [p, setP] = useState<Provider | undefined>(() => seedProvider(id));
   const [loading, setLoading] = useState(!p);
   const [reviews, setReviews] = useState(sampleReviews);
@@ -61,7 +63,7 @@ export default function ProviderScreen() {
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       <ScreenHeader title={category?.name ?? 'Prestataire'} />
-      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[s.scroll, centeredContent(contentMaxWidth)]} showsVerticalScrollIndicator={false}>
         {/* En-tête profil */}
         <View style={s.hero}>
           <View style={s.avatar}>

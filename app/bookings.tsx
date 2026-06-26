@@ -6,12 +6,14 @@ import { CalendarDays, ChevronRight } from 'lucide-react-native';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { StatusBadge } from '../components/StatusBadge';
 import { colors, font } from '../theme/colors';
+import { useBreakpoint, centeredContent } from '../lib/responsive';
 import { getMyBookings, formatDate, type BookingRow } from '../lib/api';
 
 export default function MyBookings() {
   const router = useRouter();
   const [list, setList] = useState<BookingRow[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const { contentMaxWidth } = useBreakpoint();
 
   const load = async () => setList(await getMyBookings());
 
@@ -38,7 +40,7 @@ export default function MyBookings() {
     <SafeAreaView style={s.safe} edges={['top']}>
       <ScreenHeader title="Mes réservations" />
       <ScrollView
-        contentContainerStyle={s.scroll}
+        contentContainerStyle={[s.scroll, centeredContent(contentMaxWidth)]}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.link} />}
       >

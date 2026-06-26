@@ -7,10 +7,12 @@ import { ScreenHeader } from '../../components/ScreenHeader';
 import { colors, font } from '../../theme/colors';
 import { getCategory, providersByCategory, initials } from '../../lib/data';
 import { getProvidersByCategory } from '../../lib/api';
+import { useBreakpoint, centeredContent } from '../../lib/responsive';
 
 export default function CategoryScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const router = useRouter();
+  const { contentMaxWidth, isRegularUp } = useBreakpoint();
   const category = getCategory(slug);
   // Affiche le catalogue local instantanément, puis remplace par les pros en base.
   const [list, setList] = useState(() => providersByCategory(slug));
@@ -27,7 +29,7 @@ export default function CategoryScreen() {
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       <ScreenHeader title={category?.name ?? 'Prestataires'} />
-      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[s.scroll, centeredContent(contentMaxWidth)]} showsVerticalScrollIndicator={false}>
         <Text style={s.lead}>
           {category?.desc ?? 'Trouvez un prestataire vérifié.'}
         </Text>
@@ -42,11 +44,11 @@ export default function CategoryScreen() {
             <Text style={s.emptyText}>Revenez bientôt, de nouveaux pros rejoignent SERVI chaque jour.</Text>
           </View>
         ) : (
-          <View style={{ gap: 12, marginTop: 14 }}>
+          <View style={[{ gap: 12, marginTop: 14 }, isRegularUp && s.gridWrap]}>
             {list.map((p) => (
               <Pressable
                 key={p.id}
-                style={s.card}
+                style={[s.card, isRegularUp && s.cardHalf]}
                 onPress={() => router.push(`/prestataire/${p.id}`)}
               >
                 <View style={s.avatar}>
@@ -88,6 +90,8 @@ const s = StyleSheet.create({
   scroll: { paddingHorizontal: 20, paddingBottom: 28 },
   lead: { fontFamily: font.body, fontSize: 14, color: colors.muted, lineHeight: 21 },
   count: { fontFamily: font.semi, fontSize: 13, color: colors.faint, marginTop: 10 },
+  gridWrap: { flexDirection: 'row', flexWrap: 'wrap' },
+  cardHalf: { width: '48.5%' },
   card: {
     flexDirection: 'row',
     alignItems: 'center',

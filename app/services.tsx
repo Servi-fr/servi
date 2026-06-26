@@ -5,13 +5,15 @@ import { ChevronRight } from 'lucide-react-native';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { colors, font } from '../theme/colors';
 import { families, familyCategories } from '../lib/data';
+import { useBreakpoint, centeredContent } from '../lib/responsive';
 
 export default function Services() {
   const router = useRouter();
+  const { contentMaxWidth, isRegularUp } = useBreakpoint();
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       <ScreenHeader title="Nos services" />
-      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[s.scroll, centeredContent(contentMaxWidth)]} showsVerticalScrollIndicator={false}>
         <Text style={s.lead}>Parcourez par famille et trouvez un prestataire vérifié.</Text>
 
         {families.map((f) => (
@@ -22,9 +24,13 @@ export default function Services() {
               </View>
               <Text style={s.familyName}>{f.name}</Text>
             </View>
-            <View style={{ gap: 12 }}>
+            <View style={[{ gap: 12 }, isRegularUp && s.gridWrap]}>
               {familyCategories(f.slug).map((c) => (
-                <Pressable key={c.slug} style={s.row} onPress={() => router.push(`/category/${c.slug}`)}>
+                <Pressable
+                  key={c.slug}
+                  style={[s.row, isRegularUp && s.rowHalf]}
+                  onPress={() => router.push(`/category/${c.slug}`)}
+                >
                   <View style={s.iconBox}>
                     <c.Icon size={24} color={colors.link} />
                   </View>
@@ -53,6 +59,8 @@ const s = StyleSheet.create({
   familyHead: { flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 12 },
   familyIcon: { width: 30, height: 30, borderRadius: 9, backgroundColor: colors.chip, alignItems: 'center', justifyContent: 'center' },
   familyName: { fontFamily: font.display, fontSize: 18, color: colors.ink, letterSpacing: -0.3 },
+  gridWrap: { flexDirection: 'row', flexWrap: 'wrap' },
+  rowHalf: { width: '48.5%' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 18, padding: 16 },
   iconBox: { width: 50, height: 50, borderRadius: 14, backgroundColor: colors.chip, alignItems: 'center', justifyContent: 'center' },
   name: { fontFamily: font.semi, fontSize: 16, color: colors.ink },

@@ -5,6 +5,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { MessageCircle, ChevronRight } from 'lucide-react-native';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { colors, font } from '../theme/colors';
+import { useBreakpoint, centeredContent } from '../lib/responsive';
 import { initials } from '../lib/data';
 import { getMyBookings, getProBookings, STATUS_LABEL, type BookingStatus } from '../lib/api';
 
@@ -12,6 +13,7 @@ type Conv = { bookingId: string; name: string; service: string; status: BookingS
 
 export default function Messages() {
   const router = useRouter();
+  const { contentMaxWidth } = useBreakpoint();
   const [convs, setConvs] = useState<Conv[] | null>(null);
 
   useFocusEffect(
@@ -49,7 +51,7 @@ export default function Messages() {
           </Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[s.scroll, centeredContent(contentMaxWidth)]} showsVerticalScrollIndicator={false}>
           {convs.map((c) => (
             <Pressable key={c.bookingId} style={s.row} onPress={() => router.push(`/chat/${c.bookingId}`)}>
               <View style={s.avatar}>

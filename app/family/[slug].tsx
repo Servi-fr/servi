@@ -5,22 +5,24 @@ import { ChevronRight } from 'lucide-react-native';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { colors, font } from '../../theme/colors';
 import { getFamily, familyCategories } from '../../lib/data';
+import { useBreakpoint, centeredContent } from '../../lib/responsive';
 
 export default function FamilyScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const router = useRouter();
+  const { contentMaxWidth, isRegularUp } = useBreakpoint();
   const family = getFamily(slug);
   const cats = familyCategories(slug);
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       <ScreenHeader title={family?.name ?? 'Famille'} />
-      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[s.scroll, centeredContent(contentMaxWidth)]} showsVerticalScrollIndicator={false}>
         <Text style={s.lead}>{family?.tagline ?? 'Choisissez un service.'}</Text>
 
-        <View style={{ gap: 12, marginTop: 16 }}>
+        <View style={[{ gap: 12, marginTop: 16 }, isRegularUp && s.gridWrap]}>
           {cats.map((c) => (
-            <Pressable key={c.slug} style={s.row} onPress={() => router.push(`/category/${c.slug}`)}>
+            <Pressable key={c.slug} style={[s.row, isRegularUp && s.rowHalf]} onPress={() => router.push(`/category/${c.slug}`)}>
               <View style={s.iconBox}>
                 <c.Icon size={24} color={colors.link} />
               </View>
@@ -44,6 +46,8 @@ const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   scroll: { paddingHorizontal: 20, paddingBottom: 28 },
   lead: { fontFamily: font.body, fontSize: 14, color: colors.muted, lineHeight: 21 },
+  gridWrap: { flexDirection: 'row', flexWrap: 'wrap' },
+  rowHalf: { width: '48.5%' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 18, padding: 16 },
   iconBox: { width: 50, height: 50, borderRadius: 14, backgroundColor: colors.chip, alignItems: 'center', justifyContent: 'center' },
   name: { fontFamily: font.semi, fontSize: 16, color: colors.ink },

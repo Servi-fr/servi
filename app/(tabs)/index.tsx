@@ -6,12 +6,15 @@ import { Logo } from '../../components/Logo';
 import { NotifBell } from '../../components/NotifBell';
 import { colors, font } from '../../theme/colors';
 import { families } from '../../lib/data';
+import { useBreakpoint, centeredContent } from '../../lib/responsive';
 
 export default function Home() {
   const router = useRouter();
+  const { contentMaxWidth, isLarge, isRegularUp } = useBreakpoint();
+  const familyCardWidth = isLarge ? '23%' : isRegularUp ? '31.5%' : '48%';
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
-      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[s.scroll, centeredContent(contentMaxWidth)]} showsVerticalScrollIndicator={false}>
         <View style={s.topbar}>
           <Logo size={21} />
           <NotifBell />
@@ -36,7 +39,7 @@ export default function Home() {
 
         <View style={s.grid}>
           {families.map((f) => (
-            <Pressable key={f.slug} style={s.card} onPress={() => router.push(`/family/${f.slug}`)}>
+            <Pressable key={f.slug} style={[s.card, { width: familyCardWidth }]} onPress={() => router.push(`/family/${f.slug}`)}>
               <View style={s.iconBox}>
                 <f.Icon size={24} color={colors.link} />
               </View>
