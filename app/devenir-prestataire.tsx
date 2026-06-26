@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TextInput, Pressable, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, ScrollView, TextInput, Pressable, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
+import { ImagePlus } from 'lucide-react-native';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { colors, font } from '../theme/colors';
 import { categories } from '../lib/data';
-import { getMyProviderProfile, upsertMyProviderProfile } from '../lib/api';
+import { getMyProviderProfile, upsertMyProviderProfile, uploadProviderLogo } from '../lib/api';
 import { searchCompany, type CompanyResult } from '../lib/company';
 
 export default function DevenirPrestataire() {
@@ -24,6 +26,8 @@ export default function DevenirPrestataire() {
   const [siret, setSiret] = useState('');
   const [coResults, setCoResults] = useState<CompanyResult[]>([]);
   const [searchingCo, setSearchingCo] = useState(false);
+  const [logo, setLogo] = useState('');
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   useEffect(() => {
     getMyProviderProfile().then((p) => {
@@ -36,10 +40,31 @@ export default function DevenirPrestataire() {
         setCertifications(p.certifications ?? '');
         setDescription(p.description ?? '');
         if (p.siret) setSiret(p.siret);
+        if (p.logo) setLogo(p.logo);
       }
       setLoading(false);
     });
   }, []);
+
+  async function pickLogo() {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('Photos', "Autorisez l'accès aux photos pour ajouter un logo.");
+      return;
+    }
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (res.canceled || !res.assets?.[0]) return;
+    setUploadingLogo(true);
+    const up = await uploadProviderLogo(res.assets[0].uri);
+    setUploadingLogo(false);
+    if (up.ok && up.url) setLogo(up.url);
+    else Alert.alert('Erreur', "Le logo n'a pas pu être envoyé.");
+  }
 
   // Recherche d'entreprise (SIRET ou nom) via l'API gouv → auto-remplit.
   useEffect(() => {
@@ -78,6 +103,7 @@ export default function DevenirPrestataire() {
       radiusKm: radius,
       certifications: certifications.trim(),
       siret: siret || undefined,
+      logo: logo || undefined,
     });
     setSaving(false);
     if (!r.ok) {
@@ -102,6 +128,25 @@ export default function DevenirPrestataire() {
                 Proposez vos services sur SERVI : définissez votre métier, votre tarif et votre zone. Vous
                 recevrez ensuite des demandes de réservation.
               </Text>
+            )}
+
+            <Text style={s.label}>Logo / photo de l'entreprise</Text>
+            <Pressable style={s.logoPick} onPress={pickLogo} disabled={uploadingLogo}>
+              {uploadingLogo ? (
+                <ActivityIndicator color={colors.proInk} />
+              ) : logo ? (
+                <Image source={{ uri: logo }} style={s.logoImg} />
+              ) : (
+                <View style={s.logoPlaceholder}>
+                  <ImagePlus size={24} color={colors.faint} />
+                  <Text style={s.logoHint}>Ajouter</Text>
+                </View>
+              )}
+            </Pressable>
+            {!!logo && (
+              <Pressable onPress={pickLogo}>
+                <Text style={s.logoChange}>Changer le logo</Text>
+              </Pressable>
             )}
 
             <Text style={s.label}>Votre entreprise (SIRET ou nom)</Text>
@@ -222,6 +267,11 @@ const s = StyleSheet.create({
   chipText: { fontFamily: font.medium, fontSize: 13.5, color: colors.muted },
   chipTextOn: { color: '#fff' },
   input: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line3, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, fontFamily: font.body, fontSize: 15, color: colors.ink },
+  logoPick: { width: 110, height: 110, borderRadius: 18, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line3, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  logoImg: { width: '100%', height: '100%' },
+  logoPlaceholder: { alignItems: 'center', gap: 6 },
+  logoHint: { fontFamily: font.medium, fontSize: 12, color: colors.faint },
+  logoChange: { fontFamily: font.semi, fontSize: 13, color: colors.link, marginTop: 8 },
   coHint: { fontFamily: font.body, fontSize: 12.5, color: colors.faint, marginTop: 6 },
   coBox: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line3, borderRadius: 12, marginTop: 8, overflow: 'hidden' },
   coRow: { paddingVertical: 11, paddingHorizontal: 14 },

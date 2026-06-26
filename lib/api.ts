@@ -181,6 +181,7 @@ export type ProviderProfile = {
   skills: string[] | null;
   rating: number | null;
   siret?: string | null;
+  logo?: string | null;
 };
 
 export async function getMyProviderProfile(): Promise<ProviderProfile | null> {
@@ -190,7 +191,7 @@ export async function getMyProviderProfile(): Promise<ProviderProfile | null> {
     // Résilient : tente avec siret, repli sans la colonne si la migration n'est pas encore passée.
     let res = await supabase
       .from('PrestataireProfile')
-      .select('id,service,hourlyRate,description,zone,radiusKm,certifications,skills,rating,siret')
+      .select('id,service,hourlyRate,description,zone,radiusKm,certifications,skills,rating,siret,logo')
       .eq('userId', uid)
       .maybeSingle();
     if (res.error) {
@@ -214,6 +215,7 @@ export async function upsertMyProviderProfile(p: {
   radiusKm?: number;
   certifications?: string;
   siret?: string;
+  logo?: string;
 }): Promise<{ ok: boolean; error?: string }> {
   const uid = await getUid();
   if (!uid) return { ok: false, error: 'not-auth' };
@@ -226,15 +228,15 @@ export async function upsertMyProviderProfile(p: {
     radiusKm: p.radiusKm ?? null,
     certifications: p.certifications ?? null,
   };
-  const withSiret = { ...base, siret: p.siret ?? null };
+  const withExtra = { ...base, siret: p.siret ?? null, logo: p.logo ?? null };
   if (existing) {
-    // Résilient : tente avec siret, repli sans la colonne si la migration n'est pas passée.
-    let { error } = await supabase.from('PrestataireProfile').update(withSiret).eq('userId', uid);
+    // Résilient : tente avec siret/logo, repli sans ces colonnes si la migration n'est pas passée.
+    let { error } = await supabase.from('PrestataireProfile').update(withExtra).eq('userId', uid);
     if (error) ({ error } = await supabase.from('PrestataireProfile').update(base).eq('userId', uid));
     if (error) return { ok: false, error: error.message };
   } else {
     const insBase = { id: genId('pp'), userId: uid, ...base, skills: [], totalEarned: 0, rating: 0 };
-    let { error } = await supabase.from('PrestataireProfile').insert({ ...insBase, siret: p.siret ?? null });
+    let { error } = await supabase.from('PrestataireProfile').insert({ ...insBase, siret: p.siret ?? null, logo: p.logo ?? null });
     if (error) ({ error } = await supabase.from('PrestataireProfile').insert(insBase));
     if (error) return { ok: false, error: error.message };
   }
@@ -553,6 +555,24 @@ export async function uploadAvatar(uri: string): Promise<{ ok: boolean; url?: st
   try {
     const arraybuffer = await fetch(uri).then((r) => r.arrayBuffer());
     const path = `${uid}/avatar_${Date.now()}.jpg`;
+    const { error } = await supabase.storage
+      .from('avatars')
+      .upload(path, arraybuffer, { contentType: 'image/jpeg', upsert: true });
+    if (error) return { ok: false, error: error.message };
+    const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+    return { ok: true, url: data.publicUrl };
+  } catch (e: any) {
+    return { ok: false, error: e?.message ?? 'upload-failed' };
+  }
+}
+
+// Logo d'entreprise du prestataire (réutilise le bucket public 'avatars').
+export async function uploadProviderLogo(uri: string): Promise<{ ok: boolean; url?: string; error?: string }> {
+  const uid = await getUid();
+  if (!uid) return { ok: false, error: 'not-auth' };
+  try {
+    const arraybuffer = await fetch(uri).then((r) => r.arrayBuffer());
+    const path = `${uid}/logo_${Date.now()}.jpg`;
     const { error } = await supabase.storage
       .from('avatars')
       .upload(path, arraybuffer, { contentType: 'image/jpeg', upsert: true });
