@@ -5,12 +5,13 @@ import MapView, { Marker, type Region } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { colors, font } from '../../theme/colors';
-import { getProviders } from '../../lib/api';
+import { getProviders, getMyProfile } from '../../lib/api';
 import { geocode } from '../../lib/geo';
 import { categories, getCategory, type Provider } from '../../lib/data';
 
 type Pin = { provider: Provider; lat: number; lng: number };
-const PARIS: Region = { latitude: 48.8566, longitude: 2.3522, latitudeDelta: 0.3, longitudeDelta: 0.3 };
+// Vue par défaut : France entière (jamais "Paris par défaut").
+const FRANCE: Region = { latitude: 46.6, longitude: 2.4, latitudeDelta: 9, longitudeDelta: 9 };
 
 export default function MapScreen() {
   const router = useRouter();
@@ -22,19 +23,26 @@ export default function MapScreen() {
   useEffect(() => {
     let active = true;
     (async () => {
+      // Centre la carte : 1) géolocalisation, 2) adresse du profil, 3) France entière.
+      let center: { latitude: number; longitude: number } | null = null;
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status === 'granted') {
           const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-          if (active) {
-            mapRef.current?.animateToRegion(
-              { latitude: loc.coords.latitude, longitude: loc.coords.longitude, latitudeDelta: 0.2, longitudeDelta: 0.2 },
-              700,
-            );
-          }
+          center = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
         }
       } catch {
-        /* localisation refusée : on garde Paris */
+        /* localisation indisponible */
+      }
+      if (!center) {
+        const me = await getMyProfile();
+        if (me?.address) {
+          const g = await geocode(me.address);
+          if (g) center = { latitude: g.lat, longitude: g.lng };
+        }
+      }
+      if (center && active) {
+        mapRef.current?.animateToRegion({ ...center, latitudeDelta: 0.25, longitudeDelta: 0.25 }, 700);
       }
 
       const providers = await getProviders();
@@ -63,7 +71,7 @@ export default function MapScreen() {
 
   return (
     <View style={s.container}>
-      <MapView ref={mapRef} style={StyleSheet.absoluteFill} initialRegion={PARIS} showsUserLocation showsMyLocationButton>
+      <MapView ref={mapRef} style={StyleSheet.absoluteFill} initialRegion={FRANCE} showsUserLocation showsMyLocationButton>
         {visible.map((pin) => {
           const Icon = getCategory(pin.provider.category)?.Icon;
           return (
