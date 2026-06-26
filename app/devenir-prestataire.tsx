@@ -28,6 +28,7 @@ export default function DevenirPrestataire() {
   const [searchingCo, setSearchingCo] = useState(false);
   const [logo, setLogo] = useState('');
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [relanceDays, setRelanceDays] = useState(0);
 
   useEffect(() => {
     getMyProviderProfile().then((p) => {
@@ -41,6 +42,7 @@ export default function DevenirPrestataire() {
         setDescription(p.description ?? '');
         if (p.siret) setSiret(p.siret);
         if (p.logo) setLogo(p.logo);
+        setRelanceDays(p.relanceDays ?? 0);
       }
       setLoading(false);
     });
@@ -104,6 +106,7 @@ export default function DevenirPrestataire() {
       certifications: certifications.trim(),
       siret: siret || undefined,
       logo: logo || undefined,
+      relanceDays,
     });
     setSaving(false);
     if (!r.ok) {
@@ -241,6 +244,26 @@ export default function DevenirPrestataire() {
               style={s.textarea}
             />
 
+            <Text style={s.label}>Relance automatique des clients</Text>
+            <Text style={s.relanceHint}>
+              Relancer un client sans nouvelle après ce délai (Premium).
+            </Text>
+            <View style={s.chips}>
+              {[
+                { d: 0, l: 'Désactivé' },
+                { d: 3, l: '3 jours' },
+                { d: 7, l: '7 jours' },
+                { d: 14, l: '14 jours' },
+              ].map((o) => {
+                const active = o.d === relanceDays;
+                return (
+                  <Pressable key={o.d} style={[s.chip, active && s.chipOn]} onPress={() => setRelanceDays(o.d)}>
+                    <Text style={[s.chipText, active && s.chipTextOn]}>{o.l}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
             <Pressable style={[s.btn, (!ready || saving) && s.btnOff]} disabled={!ready || saving} onPress={save}>
               {saving ? (
                 <ActivityIndicator color="#fff" />
@@ -273,6 +296,7 @@ const s = StyleSheet.create({
   logoHint: { fontFamily: font.medium, fontSize: 12, color: colors.faint },
   logoChange: { fontFamily: font.semi, fontSize: 13, color: colors.link, marginTop: 8 },
   coHint: { fontFamily: font.body, fontSize: 12.5, color: colors.faint, marginTop: 6 },
+  relanceHint: { fontFamily: font.body, fontSize: 12.5, color: colors.faint, marginTop: -2, marginBottom: 10 },
   coBox: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line3, borderRadius: 12, marginTop: 8, overflow: 'hidden' },
   coRow: { paddingVertical: 11, paddingHorizontal: 14 },
   coBorder: { borderTopWidth: 1, borderTopColor: colors.line },

@@ -184,6 +184,7 @@ export type ProviderProfile = {
   rating: number | null;
   siret?: string | null;
   logo?: string | null;
+  relanceDays?: number | null;
 };
 
 export async function getMyProviderProfile(): Promise<ProviderProfile | null> {
@@ -193,7 +194,7 @@ export async function getMyProviderProfile(): Promise<ProviderProfile | null> {
     // Résilient : tente avec siret, repli sans la colonne si la migration n'est pas encore passée.
     let res = await supabase
       .from('PrestataireProfile')
-      .select('id,service,hourlyRate,description,zone,radiusKm,certifications,skills,rating,siret,logo')
+      .select('id,service,hourlyRate,description,zone,radiusKm,certifications,skills,rating,siret,logo,relanceDays')
       .eq('userId', uid)
       .maybeSingle();
     if (res.error) {
@@ -218,6 +219,7 @@ export async function upsertMyProviderProfile(p: {
   certifications?: string;
   siret?: string;
   logo?: string;
+  relanceDays?: number;
 }): Promise<{ ok: boolean; error?: string }> {
   const uid = await getUid();
   if (!uid) return { ok: false, error: 'not-auth' };
@@ -230,7 +232,7 @@ export async function upsertMyProviderProfile(p: {
     radiusKm: p.radiusKm ?? null,
     certifications: p.certifications ?? null,
   };
-  const withExtra = { ...base, siret: p.siret ?? null, logo: p.logo ?? null };
+  const withExtra = { ...base, siret: p.siret ?? null, logo: p.logo ?? null, relanceDays: p.relanceDays ?? 0 };
   if (existing) {
     // Résilient : tente avec siret/logo, repli sans ces colonnes si la migration n'est pas passée.
     let { error } = await supabase.from('PrestataireProfile').update(withExtra).eq('userId', uid);
@@ -238,7 +240,7 @@ export async function upsertMyProviderProfile(p: {
     if (error) return { ok: false, error: error.message };
   } else {
     const insBase = { id: genId('pp'), userId: uid, ...base, skills: [], totalEarned: 0, rating: 0 };
-    let { error } = await supabase.from('PrestataireProfile').insert({ ...insBase, siret: p.siret ?? null, logo: p.logo ?? null });
+    let { error } = await supabase.from('PrestataireProfile').insert({ ...insBase, siret: p.siret ?? null, logo: p.logo ?? null, relanceDays: p.relanceDays ?? 0 });
     if (error) ({ error } = await supabase.from('PrestataireProfile').insert(insBase));
     if (error) return { ok: false, error: error.message };
   }
