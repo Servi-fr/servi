@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { CalendarDays, User, Check, X, MessageCircle, Star, Briefcase, MapPin } from 'lucide-react-native';
+import { CalendarDays, CalendarPlus, User, Check, X, MessageCircle, Star, Briefcase, MapPin } from 'lucide-react-native';
+import { addToCalendar } from '../../lib/calendar';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { StatusBadge } from '../../components/StatusBadge';
 import { colors, font } from '../../theme/colors';
@@ -84,6 +85,22 @@ export default function BookingDetail() {
     setB({ ...b, status });
   }
 
+  async function addAgenda() {
+    if (!b) return;
+    const start = new Date(b.date);
+    const end = new Date(start.getTime() + (b.duration || 60) * 60000);
+    const r = await addToCalendar({
+      title: `SERVI · ${b.service}`,
+      start,
+      end,
+      location: b.address ?? undefined,
+      notes: otherName ? `Avec ${otherName}` : undefined,
+    });
+    if (r.ok) Alert.alert('Agenda', 'Réservation ajoutée à votre agenda ✓');
+    else if (r.error === 'permission') Alert.alert('Agenda', "Autorisez l'accès au calendrier dans les réglages.");
+    else Alert.alert('Agenda', "Impossible d'ajouter à l'agenda.");
+  }
+
   async function submitReview() {
     if (!b) return;
     setBusy(true);
@@ -147,6 +164,13 @@ export default function BookingDetail() {
           <MessageCircle size={18} color={colors.link} />
           <Text style={s.secondaryText}>Contacter {otherName?.split(' ')[0] ?? ''}</Text>
         </Pressable>
+
+        {(b.status === 'CONFIRMED' || b.status === 'PENDING') && (
+          <Pressable style={s.secondary} onPress={addAgenda}>
+            <CalendarPlus size={18} color={colors.link} />
+            <Text style={s.secondaryText}>Ajouter à mon agenda</Text>
+          </Pressable>
+        )}
 
         {/* Actions prestataire */}
         {amPro && b.status === 'PENDING' && (

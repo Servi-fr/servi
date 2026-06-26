@@ -42,7 +42,13 @@
           "photosPermission": "SERVI accède à vos photos pour définir votre photo de profil."
         }
       ],
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "SERVI ajoute vos réservations confirmées à votre agenda."
+        }
+      ]
     ],
     "scheme": "serviapp",
     "newArchEnabled": true,
