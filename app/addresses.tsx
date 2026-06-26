@@ -44,7 +44,7 @@ export default function Addresses() {
     const r = await addMyAddress({ label: label.trim(), address: selected.label, lat: selected.lat, lng: selected.lng });
     setSaving(false);
     if (!r.ok) {
-      Alert.alert('Erreur', "L'adresse n'a pas pu être enregistrée.");
+      Alert.alert('Erreur', `L'adresse n'a pas pu être enregistrée.${r.error ? `\n\n(${r.error})` : ''}`);
       return;
     }
     setLabel('');
