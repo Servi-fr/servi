@@ -137,6 +137,7 @@ export type MyProfile = {
   phone: string | null;
   image: string | null;
   role: Role;
+  plan: string; // FREE | PREMIUM | PRO
 };
 
 export async function getMyProfile(): Promise<MyProfile | null> {
@@ -145,7 +146,7 @@ export async function getMyProfile(): Promise<MyProfile | null> {
   try {
     const { data } = await supabase
       .from('User')
-      .select('id,name,email,firstName,lastName,address,phone,image,role')
+      .select('id,name,email,firstName,lastName,address,phone,image,role,plan')
       .eq('id', uid)
       .maybeSingle();
     return (data as MyProfile) ?? null;
