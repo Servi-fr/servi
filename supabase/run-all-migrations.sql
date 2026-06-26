@@ -1,7 +1,6 @@
 -- ============================================================
 -- SERVI — TOUTES les migrations (idempotent, relançable)
--- Colle ce fichier entier dans Supabase → SQL Editor → Run.
--- (N'inclut PAS mobile-setup.sql ni cleanup-demo-data.sql)
+-- Colle ce fichier entier dans Supabase → SQL Editor (projet serviapp) → Run.
 -- ============================================================
 
 -- ▼▼▼ notifications-storage.sql ▼▼▼
@@ -311,9 +310,67 @@ create policy "servi_addr_all" on public."SavedAddress"
 
 -- ▼▼▼ prestataire-siret.sql ▼▼▼
 -- ============================================================
--- SERVI — Colonnes "extras" du profil prestataire (SIRET, logo, relance)
+-- SERVI — Colonnes "extras" du profil prestataire (SIRET, logo, relance, photos)
 -- À exécuter dans Supabase → SQL Editor. Idempotent (relançable sans risque).
 -- ============================================================
-alter table public."PrestataireProfile" add column if not exists siret       text;
-alter table public."PrestataireProfile" add column if not exists logo        text;  -- URL du logo (bucket avatars)
-alter table public."PrestataireProfile" add column if not exists "relanceDays" integer not null default 0; -- relance auto après N jours sans nouvelle (0 = désactivé), réservé Premium
+alter table public."PrestataireProfile" add column if not exists siret        text;
+alter table public."PrestataireProfile" add column if not exists logo         text;   -- URL du logo (bucket avatars)
+alter table public."PrestataireProfile" add column if not exists "relanceDays" integer not null default 0; -- relance auto après N jours (0 = off), Premium
+alter table public."PrestataireProfile" add column if not exists photos       text[];  -- galerie de réalisations (URLs)
+alter table public."PrestataireProfile" add column if not exists experience   integer; -- années d'expérience
+
+-- ▼▼▼ service-request.sql ▼▼▼
+-- ============================================================
+-- SERVI — Demandes de prestation (intake client + matchmaking)
+-- À exécuter dans Supabase → SQL Editor. Idempotent.
+-- ============================================================
+create table if not exists public."ServiceRequest" (
+  id          text primary key,
+  "userId"    text not null references public."User"(id) on delete cascade,
+  category    text not null,
+  frequency   text,            -- Ponctuel | Hebdomadaire | Mensuel
+  details     text,
+  address     text,
+  lat         double precision,
+  lng         double precision,
+  status      text not null default 'open',
+  "createdAt" timestamptz not null default now()
+);
+create index if not exists idx_servicerequest_cat on public."ServiceRequest"(category);
+
+alter table public."ServiceRequest" enable row level security;
+grant select, insert, update, delete on public."ServiceRequest" to authenticated;
+
+drop policy if exists "servi_request_own" on public."ServiceRequest";
+create policy "servi_request_own" on public."ServiceRequest"
+  for all to authenticated
+  using ("userId" = auth.uid()::text) with check ("userId" = auth.uid()::text);
+
+-- ▼▼▼ sponsored.sql ▼▼▼
+-- ============================================================
+-- SERVI — Annonces sponsorisées (B6 : prestataires mis en avant sur l'accueil)
+-- À exécuter dans Supabase → SQL Editor. Idempotent.
+-- ============================================================
+create table if not exists public."SponsoredListing" (
+  id              text primary key,
+  "prestataireId" text not null references public."User"(id) on delete cascade,
+  category        text,
+  city            text,
+  status          text not null default 'active',  -- active | paused
+  "createdAt"     timestamptz not null default now()
+);
+create index if not exists idx_sponsored_status on public."SponsoredListing"(status);
+
+alter table public."SponsoredListing" enable row level security;
+grant select on public."SponsoredListing" to anon, authenticated;
+grant insert, update, delete on public."SponsoredListing" to authenticated;
+
+-- Lecture publique (pour afficher les mises en avant à tous).
+drop policy if exists "servi_sponsored_read" on public."SponsoredListing";
+create policy "servi_sponsored_read" on public."SponsoredListing" for select using (true);
+
+-- Le prestataire gère ses propres mises en avant.
+drop policy if exists "servi_sponsored_own" on public."SponsoredListing";
+create policy "servi_sponsored_own" on public."SponsoredListing"
+  for all to authenticated
+  using ("prestataireId" = auth.uid()::text) with check ("prestataireId" = auth.uid()::text);
