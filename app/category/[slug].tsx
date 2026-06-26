@@ -5,9 +5,10 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Star, MapPin, BadgeCheck, ChevronRight, SearchX } from 'lucide-react-native';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { colors, font } from '../../theme/colors';
-import { getCategory, providersByCategory, initials } from '../../lib/data';
+import { getCategory, providersByCategory, initials, isSapEligible } from '../../lib/data';
 import { getProvidersByCategory } from '../../lib/api';
 import { useBreakpoint, centeredContent } from '../../lib/responsive';
+import { SapBadge } from '../../components/SapBadge';
 
 export default function CategoryScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -34,6 +35,11 @@ export default function CategoryScreen() {
           {category?.desc ?? 'Trouvez un prestataire vérifié.'}
         </Text>
         <Text style={s.count}>{list.length} prestataire{list.length > 1 ? 's' : ''} disponible{list.length > 1 ? 's' : ''}</Text>
+        {isSapEligible(slug) && (
+          <View style={{ marginTop: 10 }}>
+            <SapBadge />
+          </View>
+        )}
 
         {list.length === 0 ? (
           <View style={s.empty}>

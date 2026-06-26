@@ -21,17 +21,27 @@ export type Category = {
   Icon: LucideIcon;
   price: number;
   count: number;
+  // Crédit d'impôt "services à la personne" : 50 % des dépenses (cf. docs/SPEC-PAIEMENTS-FISCALITE.md).
+  sapEligible?: boolean; // la prestation ouvre droit au crédit d'impôt
+  sapCap?: number; // sous-plafond annuel spécifique en € (inclus dans le plafond global)
+  sapNote?: string; // précision éventuelle (ex. condition)
 };
 
+// Crédit d'impôt SAP : 50 % des sommes versées, prestataire DÉCLARÉ + prestation au domicile.
+export const SAP_CREDIT_RATE = 0.5;
+export function isSapEligible(slug: string | undefined): boolean {
+  return !!categories.find((c) => c.slug === slug)?.sapEligible;
+}
+
 export const categories: Category[] = [
-  { slug: 'menage', name: 'Ménage', desc: 'Entretien, grand nettoyage, repassage', Icon: Sparkles, price: 25, count: 480 },
-  { slug: 'jardinage', name: 'Jardinage', desc: 'Tonte, taille, plantation', Icon: Sprout, price: 30, count: 320 },
+  { slug: 'menage', name: 'Ménage', desc: 'Entretien, grand nettoyage, repassage', Icon: Sparkles, price: 25, count: 480, sapEligible: true },
+  { slug: 'jardinage', name: 'Jardinage', desc: 'Tonte, taille, plantation', Icon: Sprout, price: 30, count: 320, sapEligible: true, sapCap: 5000 },
   { slug: 'plomberie', name: 'Plomberie', desc: 'Dépannage, installation', Icon: Wrench, price: 45, count: 210 },
   { slug: 'electricite', name: 'Électricité', desc: 'Mise aux normes, dépannage', Icon: Zap, price: 50, count: 185 },
   { slug: 'coaching', name: 'Coaching', desc: 'Sport, bien-être à domicile', Icon: Dumbbell, price: 40, count: 140 },
-  { slug: 'cours', name: 'Cours particuliers', desc: 'Soutien scolaire, langues', Icon: GraduationCap, price: 28, count: 390 },
+  { slug: 'cours', name: 'Cours particuliers', desc: 'Soutien scolaire, langues', Icon: GraduationCap, price: 28, count: 390, sapEligible: true },
   { slug: 'beaute', name: 'Beauté', desc: 'Coiffure, soins à domicile', Icon: Scissors, price: 35, count: 260 },
-  { slug: 'bricolage', name: 'Bricolage', desc: 'Montage, réparations', Icon: Hammer, price: 38, count: 300 },
+  { slug: 'bricolage', name: 'Bricolage', desc: 'Montage, réparations', Icon: Hammer, price: 38, count: 300, sapEligible: true, sapCap: 500, sapNote: '≤ 2 h / intervention' },
 ];
 
 // Familles : regroupent les catégories pour la navigation (Accueil & Services).

@@ -16,7 +16,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Check, MapPin } from 'lucide-react-native';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { colors, font } from '../../theme/colors';
-import { getProvider as seedProvider, initials, type Provider } from '../../lib/data';
+import { getProvider as seedProvider, initials, isSapEligible, SAP_CREDIT_RATE, type Provider } from '../../lib/data';
 import { createBooking, getProviderById, getUid, isSlotTaken, sendMessage } from '../../lib/api';
 import { config } from '../../lib/config';
 import { payForBooking } from '../../lib/payments';
@@ -114,6 +114,7 @@ export default function ReservationScreen() {
   const svc = p.services[serviceIdx];
   const fee = Math.round(svc.price * FEE_RATE);
   const total = svc.price + fee;
+  const sapCredit = isSapEligible(p.category) ? Math.round(total * SAP_CREDIT_RATE) : 0;
   const ready = slot !== null && selected !== null;
   const chosenDay = days[dayIdx];
   const isSelf = !!myUid && p.id === myUid;
@@ -389,6 +390,14 @@ export default function ReservationScreen() {
             <Row label="Frais de service SERVI" value={`${fee} €`} />
             <View style={s.summaryDivider} />
             <Row label="Total" value={`${total} €`} bold />
+            {sapCredit > 0 && (
+              <>
+                <Row label="Crédit d'impôt estimé (−50 %)" value={`−${sapCredit} €`} credit />
+                <View style={s.summaryDivider} />
+                <Row label="Reste à votre charge *" value={`${total - sapCredit} €`} bold />
+                <Text style={s.sapNote}>* Estimation. Crédit d'impôt « services à la personne » sous conditions.</Text>
+              </>
+            )}
           </View>
         </ScrollView>
 
@@ -413,11 +422,11 @@ export default function ReservationScreen() {
   );
 }
 
-function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
+function Row({ label, value, bold, credit }: { label: string; value: string; bold?: boolean; credit?: boolean }) {
   return (
     <View style={s.sumRow}>
-      <Text style={[s.sumLabel, bold && s.sumLabelBold]}>{label}</Text>
-      <Text style={[s.sumValue, bold && s.sumValueBold]}>{value}</Text>
+      <Text style={[s.sumLabel, bold && s.sumLabelBold, credit && s.sumLabelCredit]}>{label}</Text>
+      <Text style={[s.sumValue, bold && s.sumValueBold, credit && s.sumValueCredit]}>{value}</Text>
     </View>
   );
 }
@@ -478,6 +487,9 @@ const s = StyleSheet.create({
   sumLabelBold: { fontFamily: font.semi, fontSize: 15, color: colors.ink },
   sumValue: { fontFamily: font.medium, fontSize: 14, color: colors.ink },
   sumValueBold: { fontFamily: font.display, fontSize: 18, color: colors.ink },
+  sumLabelCredit: { color: colors.okText },
+  sumValueCredit: { color: colors.okText, fontFamily: font.semi },
+  sapNote: { fontFamily: font.body, fontSize: 11, color: colors.faint, marginTop: 8, lineHeight: 16 },
   summaryDivider: { height: 1, backgroundColor: colors.line, marginVertical: 8 },
 
   ctaBar: { backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.line3, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 28 },
