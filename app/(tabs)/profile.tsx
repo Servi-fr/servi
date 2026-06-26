@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { LogOut, CalendarDays, CreditCard, Heart, ChevronRight, ArrowLeftRight, FileText, MessageCircle, Crown, Percent, type LucideIcon } from 'lucide-react-native';
+import { LogOut, CalendarDays, CreditCard, Heart, ChevronRight, ArrowLeftRight, FileText, MessageCircle, Crown, Percent, MapPin, type LucideIcon } from 'lucide-react-native';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '../../lib/supabase';
 import { colors, font } from '../../theme/colors';
@@ -12,6 +12,7 @@ const items: { label: string; Icon: LucideIcon; route?: string }[] = [
   { label: 'Passer Premium', Icon: Crown, route: '/premium' },
   { label: 'Mes réservations', Icon: CalendarDays, route: '/bookings' },
   { label: 'Messages', Icon: MessageCircle, route: '/messages' },
+  { label: 'Mes adresses', Icon: MapPin, route: '/addresses' },
   { label: "Crédit d'impôt", Icon: Percent, route: '/credit-impot' },
   { label: 'Paiements', Icon: CreditCard },
   { label: 'Favoris', Icon: Heart },

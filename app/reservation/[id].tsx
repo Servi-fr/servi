@@ -13,11 +13,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Check, MapPin } from 'lucide-react-native';
+import { Check, MapPin, Home } from 'lucide-react-native';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { colors, font } from '../../theme/colors';
 import { getProvider as seedProvider, initials, isSapEligible, SAP_CREDIT_RATE, type Provider } from '../../lib/data';
-import { createBooking, getProviderById, getUid, isSlotTaken, sendMessage } from '../../lib/api';
+import { createBooking, getProviderById, getUid, getMyAddresses, isSlotTaken, sendMessage, type SavedAddress } from '../../lib/api';
 import { config } from '../../lib/config';
 import { payForBooking } from '../../lib/payments';
 import { searchAddresses, distanceToZoneKm, type AddressSuggestion } from '../../lib/geo';
@@ -32,6 +32,7 @@ export default function ReservationScreen() {
   const [p, setP] = useState<Provider | undefined>(() => seedProvider(id));
   const [loadingP, setLoadingP] = useState(!p);
   const [myUid, setMyUid] = useState<string | null>(null);
+  const [savedAddrs, setSavedAddrs] = useState<SavedAddress[]>([]);
   useEffect(() => {
     let active = true;
     getProviderById(id).then((r) => {
@@ -40,6 +41,7 @@ export default function ReservationScreen() {
       setLoadingP(false);
     });
     getUid().then((u) => active && setMyUid(u));
+    getMyAddresses().then((r) => active && setSavedAddrs(r));
     return () => {
       active = false;
     };
@@ -328,6 +330,27 @@ export default function ReservationScreen() {
 
           {/* Adresse — autocomplétion BAN, sélection obligatoire */}
           <Text style={s.label}>Adresse d'intervention</Text>
+          {savedAddrs.length > 0 && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.savedRow}>
+              {savedAddrs.map((a) => {
+                const active = selected?.label === a.address;
+                return (
+                  <Pressable
+                    key={a.id}
+                    style={[s.savedChip, active && s.savedChipOn]}
+                    onPress={() => {
+                      setAddress(a.address);
+                      setSelected({ label: a.address, lat: a.lat ?? 0, lng: a.lng ?? 0, city: '', postcode: '' });
+                      setSuggestions([]);
+                    }}
+                  >
+                    <Home size={13} color={active ? '#fff' : colors.link} />
+                    <Text style={[s.savedChipText, active && s.savedChipTextOn]}>{a.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          )}
           <View style={[s.inputWrap, selected && s.inputWrapOk]}>
             <MapPin size={18} color={selected ? colors.okText : colors.faint} />
             <TextInput
@@ -477,6 +500,11 @@ const s = StyleSheet.create({
   suggestBorder: { borderTopWidth: 1, borderTopColor: colors.line },
   suggestText: { flex: 1, fontFamily: font.body, fontSize: 14, color: colors.ink },
   addrHint: { fontFamily: font.body, fontSize: 12.5, color: colors.faint, marginTop: 8 },
+  savedRow: { gap: 8, paddingBottom: 10 },
+  savedChip: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line3, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 8 },
+  savedChipOn: { backgroundColor: colors.blue, borderColor: colors.blue },
+  savedChipText: { fontFamily: font.semi, fontSize: 13, color: colors.ink },
+  savedChipTextOn: { color: '#fff' },
   selfBanner: { backgroundColor: colors.okBg, borderRadius: 12, padding: 12, marginTop: 10 },
   selfBannerText: { fontFamily: font.body, fontSize: 12.5, color: colors.okText, lineHeight: 18 },
   textarea: { minHeight: 80, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line3, borderRadius: 13, padding: 14, fontFamily: font.body, fontSize: 15, color: colors.ink, textAlignVertical: 'top' },

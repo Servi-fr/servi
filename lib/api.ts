@@ -587,3 +587,54 @@ export function formatShortDate(iso: string): string {
   const d = new Date(iso);
   return `${d.getDate()} ${MO[d.getMonth()]}`;
 }
+
+// ============================================================
+//  Carnet d'adresses client (adresses d'intervention enregistrées)
+// ============================================================
+export type SavedAddress = {
+  id: string;
+  label: string;
+  address: string;
+  lat: number | null;
+  lng: number | null;
+  isDefault: boolean;
+};
+
+export async function getMyAddresses(): Promise<SavedAddress[]> {
+  const uid = await getUid();
+  if (!uid) return [];
+  try {
+    const { data } = await supabase
+      .from('SavedAddress')
+      .select('id,label,address,lat,lng,isDefault')
+      .eq('userId', uid)
+      .order('isDefault', { ascending: false });
+    return (data as SavedAddress[]) ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function addMyAddress(a: {
+  label: string;
+  address: string;
+  lat?: number;
+  lng?: number;
+}): Promise<{ ok: boolean; error?: string }> {
+  const uid = await getUid();
+  if (!uid) return { ok: false, error: 'not-auth' };
+  const { error } = await supabase.from('SavedAddress').insert({
+    id: genId('addr'),
+    userId: uid,
+    label: a.label,
+    address: a.address,
+    lat: a.lat ?? null,
+    lng: a.lng ?? null,
+  });
+  return error ? { ok: false, error: error.message } : { ok: true };
+}
+
+export async function deleteMyAddress(id: string): Promise<{ ok: boolean }> {
+  const { error } = await supabase.from('SavedAddress').delete().eq('id', id);
+  return { ok: !error };
+}
