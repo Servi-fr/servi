@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Star, MapPin, BadgeCheck, Check, Award } from 'lucide-react-native';
@@ -67,7 +67,7 @@ export default function ProviderScreen() {
         {/* En-tête profil */}
         <View style={s.hero}>
           <View style={s.avatar}>
-            <Text style={s.avatarText}>{initials(p.name)}</Text>
+            {p.logo ? <Image source={{ uri: p.logo }} style={s.avatarImg} /> : <Text style={s.avatarText}>{initials(p.name)}</Text>}
           </View>
           <View style={s.nameRow}>
             <Text style={s.name}>{p.name}</Text>
@@ -203,8 +203,9 @@ const s = StyleSheet.create({
   nfText: { fontFamily: font.body, fontSize: 15, color: colors.muted },
 
   hero: { alignItems: 'center', paddingTop: 6, paddingBottom: 18 },
-  avatar: { width: 84, height: 84, borderRadius: 26, backgroundColor: colors.chip, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
+  avatar: { width: 84, height: 84, borderRadius: 26, backgroundColor: colors.chip, alignItems: 'center', justifyContent: 'center', marginBottom: 14, overflow: 'hidden' },
   avatarText: { fontFamily: font.display, fontSize: 28, color: colors.link },
+  avatarImg: { width: '100%', height: '100%' },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   name: { fontFamily: font.display, fontSize: 24, color: colors.ink, letterSpacing: -0.5 },
   tagline: { fontFamily: font.body, fontSize: 14.5, color: colors.muted, marginTop: 4 },

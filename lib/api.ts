@@ -33,6 +33,7 @@ type ProfileRow = {
   zone: string | null;
   radiusKm: number | null;
   certifications: string | null;
+  logo?: string | null;
   User: {
     name: string | null;
     firstName: string | null;
@@ -76,6 +77,7 @@ function mapRow(r: ProfileRow): Provider {
     city: r.zone || r.User?.address || '',
     verified: true,
     bio: r.description || '',
+    logo: r.logo ?? undefined,
     services: [{ label: r.service || 'Prestation', price: Math.round(r.hourlyRate ?? 0), unit: '/ h' }],
     radiusKm: r.radiusKm ?? undefined,
     certifications: parseCertifications(r.certifications),
@@ -83,7 +85,7 @@ function mapRow(r: ProfileRow): Provider {
 }
 
 const SELECT_FULL =
-  'id,userId,service,hourlyRate,description,skills,rating,zone,radiusKm,certifications,User(name,firstName,lastName,address)';
+  'id,userId,service,hourlyRate,description,skills,rating,zone,radiusKm,certifications,logo,User(name,firstName,lastName,address)';
 const SELECT_BASE =
   'id,userId,service,hourlyRate,description,skills,rating,zone,User(name,firstName,lastName,address)';
 

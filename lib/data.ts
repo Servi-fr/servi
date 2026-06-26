@@ -80,6 +80,7 @@ export type Provider = {
   city: string;
   verified: boolean;
   bio: string;
+  logo?: string;
   services: Service[];
   radiusKm?: number; // rayon d'intervention autour de la ville
   certifications?: string[]; // diplômes / certifications

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Star, MapPin, BadgeCheck, ChevronRight, SearchX } from 'lucide-react-native';
@@ -58,7 +58,7 @@ export default function CategoryScreen() {
                 onPress={() => router.push(`/prestataire/${p.id}`)}
               >
                 <View style={s.avatar}>
-                  <Text style={s.avatarText}>{initials(p.name)}</Text>
+                  {p.logo ? <Image source={{ uri: p.logo }} style={s.avatarImg} /> : <Text style={s.avatarText}>{initials(p.name)}</Text>}
                 </View>
                 <View style={{ flex: 1 }}>
                   <View style={s.nameRow}>
@@ -108,8 +108,9 @@ const s = StyleSheet.create({
     borderRadius: 18,
     padding: 14,
   },
-  avatar: { width: 54, height: 54, borderRadius: 16, backgroundColor: colors.chip, alignItems: 'center', justifyContent: 'center' },
+  avatar: { width: 54, height: 54, borderRadius: 16, backgroundColor: colors.chip, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   avatarText: { fontFamily: font.display, fontSize: 17, color: colors.link },
+  avatarImg: { width: '100%', height: '100%' },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   name: { fontFamily: font.semi, fontSize: 16, color: colors.ink, flexShrink: 1 },
   tagline: { fontFamily: font.body, fontSize: 13, color: colors.muted, marginTop: 1 },
