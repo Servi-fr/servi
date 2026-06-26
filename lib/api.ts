@@ -34,6 +34,8 @@ type ProfileRow = {
   radiusKm: number | null;
   certifications: string | null;
   logo?: string | null;
+  photos?: string[] | null;
+  experience?: number | null;
   User: {
     name: string | null;
     firstName: string | null;
@@ -78,6 +80,8 @@ function mapRow(r: ProfileRow): Provider {
     verified: true,
     bio: r.description || '',
     logo: r.logo ?? undefined,
+    photos: r.photos ?? undefined,
+    experience: r.experience ?? undefined,
     services: [{ label: r.service || 'Prestation', price: Math.round(r.hourlyRate ?? 0), unit: '/ h' }],
     radiusKm: r.radiusKm ?? undefined,
     certifications: parseCertifications(r.certifications),
@@ -85,7 +89,7 @@ function mapRow(r: ProfileRow): Provider {
 }
 
 const SELECT_FULL =
-  'id,userId,service,hourlyRate,description,skills,rating,zone,radiusKm,certifications,logo,User(name,firstName,lastName,address)';
+  'id,userId,service,hourlyRate,description,skills,rating,zone,radiusKm,certifications,logo,photos,experience,User(name,firstName,lastName,address)';
 const SELECT_BASE =
   'id,userId,service,hourlyRate,description,skills,rating,zone,User(name,firstName,lastName,address)';
 
@@ -185,6 +189,8 @@ export type ProviderProfile = {
   siret?: string | null;
   logo?: string | null;
   relanceDays?: number | null;
+  photos?: string[] | null;
+  experience?: number | null;
 };
 
 export async function getMyProviderProfile(): Promise<ProviderProfile | null> {
@@ -194,7 +200,7 @@ export async function getMyProviderProfile(): Promise<ProviderProfile | null> {
     // Résilient : tente avec siret, repli sans la colonne si la migration n'est pas encore passée.
     let res = await supabase
       .from('PrestataireProfile')
-      .select('id,service,hourlyRate,description,zone,radiusKm,certifications,skills,rating,siret,logo,relanceDays')
+      .select('id,service,hourlyRate,description,zone,radiusKm,certifications,skills,rating,siret,logo,relanceDays,photos,experience')
       .eq('userId', uid)
       .maybeSingle();
     if (res.error) {
@@ -220,6 +226,8 @@ export async function upsertMyProviderProfile(p: {
   siret?: string;
   logo?: string;
   relanceDays?: number;
+  photos?: string[];
+  experience?: number;
 }): Promise<{ ok: boolean; error?: string }> {
   const uid = await getUid();
   if (!uid) return { ok: false, error: 'not-auth' };
@@ -232,7 +240,7 @@ export async function upsertMyProviderProfile(p: {
     radiusKm: p.radiusKm ?? null,
     certifications: p.certifications ?? null,
   };
-  const withExtra = { ...base, siret: p.siret ?? null, logo: p.logo ?? null, relanceDays: p.relanceDays ?? 0 };
+  const withExtra = { ...base, siret: p.siret ?? null, logo: p.logo ?? null, relanceDays: p.relanceDays ?? 0, photos: p.photos ?? null, experience: p.experience ?? null };
   if (existing) {
     // Résilient : tente avec siret/logo, repli sans ces colonnes si la migration n'est pas passée.
     let { error } = await supabase.from('PrestataireProfile').update(withExtra).eq('userId', uid);
@@ -240,7 +248,7 @@ export async function upsertMyProviderProfile(p: {
     if (error) return { ok: false, error: error.message };
   } else {
     const insBase = { id: genId('pp'), userId: uid, ...base, skills: [], totalEarned: 0, rating: 0 };
-    let { error } = await supabase.from('PrestataireProfile').insert({ ...insBase, siret: p.siret ?? null, logo: p.logo ?? null, relanceDays: p.relanceDays ?? 0 });
+    let { error } = await supabase.from('PrestataireProfile').insert({ ...insBase, siret: p.siret ?? null, logo: p.logo ?? null, relanceDays: p.relanceDays ?? 0, photos: p.photos ?? null, experience: p.experience ?? null });
     if (error) ({ error } = await supabase.from('PrestataireProfile').insert(insBase));
     if (error) return { ok: false, error: error.message };
   }

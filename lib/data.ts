@@ -81,6 +81,8 @@ export type Provider = {
   verified: boolean;
   bio: string;
   logo?: string;
+  photos?: string[];
+  experience?: number;
   services: Service[];
   radiusKm?: number; // rayon d'intervention autour de la ville
   certifications?: string[]; // diplômes / certifications

@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TextInput, Pressable, StyleSheet, ActivityIndic
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { ImagePlus } from 'lucide-react-native';
+import { ImagePlus, X } from 'lucide-react-native';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { colors, font } from '../theme/colors';
 import { categories } from '../lib/data';
@@ -29,6 +29,9 @@ export default function DevenirPrestataire() {
   const [logo, setLogo] = useState('');
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [relanceDays, setRelanceDays] = useState(0);
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [addingPhoto, setAddingPhoto] = useState(false);
+  const [experience, setExperience] = useState('');
 
   useEffect(() => {
     getMyProviderProfile().then((p) => {
@@ -43,6 +46,8 @@ export default function DevenirPrestataire() {
         if (p.siret) setSiret(p.siret);
         if (p.logo) setLogo(p.logo);
         setRelanceDays(p.relanceDays ?? 0);
+        setPhotos(p.photos ?? []);
+        if (p.experience != null) setExperience(String(p.experience));
       }
       setLoading(false);
     });
@@ -66,6 +71,24 @@ export default function DevenirPrestataire() {
     setUploadingLogo(false);
     if (up.ok && up.url) setLogo(up.url);
     else Alert.alert('Erreur', "Le logo n'a pas pu être envoyé.");
+  }
+
+  async function addPhoto() {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('Photos', "Autorisez l'accès aux photos.");
+      return;
+    }
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
+    if (res.canceled || !res.assets?.[0]) return;
+    setAddingPhoto(true);
+    const up = await uploadProviderLogo(res.assets[0].uri);
+    setAddingPhoto(false);
+    if (up.ok && up.url) setPhotos((cur) => [...cur, up.url!]);
+    else Alert.alert('Erreur', "La photo n'a pas pu être envoyée.");
+  }
+  function removePhoto(url: string) {
+    setPhotos((cur) => cur.filter((x) => x !== url));
   }
 
   // Recherche d'entreprise (SIRET ou nom) via l'API gouv → auto-remplit.
@@ -107,6 +130,8 @@ export default function DevenirPrestataire() {
       siret: siret || undefined,
       logo: logo || undefined,
       relanceDays,
+      photos,
+      experience: experience ? parseInt(experience, 10) : undefined,
     });
     setSaving(false);
     if (!r.ok) {
@@ -203,6 +228,16 @@ export default function DevenirPrestataire() {
               style={s.input}
             />
 
+            <Text style={s.label}>Années d'expérience</Text>
+            <TextInput
+              value={experience}
+              onChangeText={setExperience}
+              keyboardType="number-pad"
+              placeholder="5"
+              placeholderTextColor={colors.faint}
+              style={s.input}
+            />
+
             <Text style={s.label}>Ville d'intervention</Text>
             <TextInput
               value={zone}
@@ -243,6 +278,21 @@ export default function DevenirPrestataire() {
               multiline
               style={s.textarea}
             />
+
+            <Text style={s.label}>Photos de réalisations</Text>
+            <View style={s.photoGrid}>
+              {photos.map((url) => (
+                <View key={url} style={s.photoBox}>
+                  <Image source={{ uri: url }} style={s.photoImg} />
+                  <Pressable style={s.photoX} onPress={() => removePhoto(url)} hitSlop={6}>
+                    <X size={13} color="#fff" />
+                  </Pressable>
+                </View>
+              ))}
+              <Pressable style={s.photoAdd} onPress={addPhoto} disabled={addingPhoto}>
+                {addingPhoto ? <ActivityIndicator color={colors.proInk} /> : <ImagePlus size={22} color={colors.faint} />}
+              </Pressable>
+            </View>
 
             <Text style={s.label}>Relance automatique des clients</Text>
             <Text style={s.relanceHint}>
@@ -295,6 +345,11 @@ const s = StyleSheet.create({
   logoPlaceholder: { alignItems: 'center', gap: 6 },
   logoHint: { fontFamily: font.medium, fontSize: 12, color: colors.faint },
   logoChange: { fontFamily: font.semi, fontSize: 13, color: colors.link, marginTop: 8 },
+  photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  photoBox: { width: 84, height: 84, borderRadius: 14, overflow: 'hidden' },
+  photoImg: { width: '100%', height: '100%' },
+  photoX: { position: 'absolute', top: 4, right: 4, width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' },
+  photoAdd: { width: 84, height: 84, borderRadius: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line3, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
   coHint: { fontFamily: font.body, fontSize: 12.5, color: colors.faint, marginTop: 6 },
   relanceHint: { fontFamily: font.body, fontSize: 12.5, color: colors.faint, marginTop: -2, marginBottom: 10 },
   coBox: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line3, borderRadius: 12, marginTop: 8, overflow: 'hidden' },

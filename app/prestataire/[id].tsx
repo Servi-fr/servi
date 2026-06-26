@@ -97,7 +97,19 @@ export default function ProviderScreen() {
 
         {/* À propos */}
         <Text style={s.section}>À propos</Text>
+        {!!p.experience && <Text style={s.exp}>{p.experience} ans d'expérience</Text>}
         <Text style={s.bio}>{p.bio}</Text>
+
+        {!!p.photos?.length && (
+          <>
+            <Text style={s.section}>Réalisations</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.galRow}>
+              {p.photos.map((url, i) => (
+                <Image key={url + i} source={{ uri: url }} style={s.galImg} />
+              ))}
+            </ScrollView>
+          </>
+        )}
 
         {/* Prestations */}
         <Text style={s.section}>Prestations</Text>
@@ -206,6 +218,9 @@ const s = StyleSheet.create({
   avatar: { width: 84, height: 84, borderRadius: 26, backgroundColor: colors.chip, alignItems: 'center', justifyContent: 'center', marginBottom: 14, overflow: 'hidden' },
   avatarText: { fontFamily: font.display, fontSize: 28, color: colors.link },
   avatarImg: { width: '100%', height: '100%' },
+  exp: { fontFamily: font.semi, fontSize: 13.5, color: colors.link, marginBottom: 6 },
+  galRow: { gap: 10, paddingVertical: 4 },
+  galImg: { width: 150, height: 150, borderRadius: 14, backgroundColor: colors.chip },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   name: { fontFamily: font.display, fontSize: 24, color: colors.ink, letterSpacing: -0.5 },
   tagline: { fontFamily: font.body, fontSize: 14.5, color: colors.muted, marginTop: 4 },
