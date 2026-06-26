@@ -48,6 +48,12 @@
         {
           "calendarPermission": "SERVI ajoute vos réservations confirmées à votre agenda."
         }
+      ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "SERVI vous permet d'ajouter un prestataire à vos contacts."
+        }
       ]
     ],
     "scheme": "serviapp",

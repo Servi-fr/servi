@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Image } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Star, MapPin, BadgeCheck, Check, Award } from 'lucide-react-native';
+import { Star, MapPin, BadgeCheck, Check, Award, UserPlus } from 'lucide-react-native';
+import { addToContacts } from '../../lib/contacts';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { colors, font } from '../../theme/colors';
 import { useBreakpoint, centeredContent } from '../../lib/responsive';
@@ -99,6 +100,18 @@ export default function ProviderScreen() {
         <Text style={s.section}>À propos</Text>
         {!!p.experience && <Text style={s.exp}>{p.experience} ans d'expérience</Text>}
         <Text style={s.bio}>{p.bio}</Text>
+        <Pressable
+          style={s.contactBtn}
+          onPress={async () => {
+            const r = await addToContacts({ name: p.name, note: `Prestataire SERVI — ${p.tagline}${p.city ? ` · ${p.city}` : ''}` });
+            if (r.ok) Alert.alert('Contacts', `${p.name} ajouté à vos contacts ✓`);
+            else if (r.error === 'permission') Alert.alert('Contacts', "Autorisez l'accès aux contacts.");
+            else Alert.alert('Contacts', "Impossible d'ajouter le contact.");
+          }}
+        >
+          <UserPlus size={16} color={colors.link} />
+          <Text style={s.contactBtnText}>Ajouter aux contacts</Text>
+        </Pressable>
 
         {!!p.photos?.length && (
           <>
@@ -219,6 +232,8 @@ const s = StyleSheet.create({
   avatarText: { fontFamily: font.display, fontSize: 28, color: colors.link },
   avatarImg: { width: '100%', height: '100%' },
   exp: { fontFamily: font.semi, fontSize: 13.5, color: colors.link, marginBottom: 6 },
+  contactBtn: { flexDirection: 'row', alignItems: 'center', gap: 7, alignSelf: 'flex-start', marginTop: 12, backgroundColor: colors.chip, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9 },
+  contactBtnText: { fontFamily: font.semi, fontSize: 13.5, color: colors.link },
   galRow: { gap: 10, paddingVertical: 4 },
   galImg: { width: 150, height: 150, borderRadius: 14, backgroundColor: colors.chip },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
