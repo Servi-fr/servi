@@ -54,7 +54,8 @@
         {
           "contactsPermission": "SERVI vous permet d'ajouter un prestataire à vos contacts."
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "scheme": "serviapp",
     "newArchEnabled": true,

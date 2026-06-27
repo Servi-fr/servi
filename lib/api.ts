@@ -750,3 +750,44 @@ export async function isMyListingSponsored(): Promise<boolean> {
     return false;
   }
 }
+
+// ============================================================
+//  Devis & Factures (P-3)
+// ============================================================
+export type BillingType = 'devis' | 'facture';
+
+// Crée le document avec numérotation continue (par prestataire et par type), renvoie le numéro.
+export async function createBillingDoc(input: {
+  type: BillingType;
+  bookingId?: string;
+  clientName?: string;
+  service?: string;
+  total?: number;
+}): Promise<{ ok: boolean; number?: string; error?: string }> {
+  const uid = await getUid();
+  if (!uid) return { ok: false, error: 'not-auth' };
+  try {
+    const { count } = await supabase
+      .from('BillingDoc')
+      .select('id', { count: 'exact', head: true })
+      .eq('prestataireId', uid)
+      .eq('type', input.type);
+    const seq = String((count ?? 0) + 1).padStart(4, '0');
+    const year = new Date().getFullYear();
+    const number = `${input.type === 'facture' ? 'FACT' : 'DEV'}-${year}-${seq}`;
+    const { error } = await supabase.from('BillingDoc').insert({
+      id: genId('bd'),
+      type: input.type,
+      number,
+      bookingId: input.bookingId ?? null,
+      prestataireId: uid,
+      clientName: input.clientName ?? null,
+      service: input.service ?? null,
+      total: input.total ?? null,
+    });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, number };
+  } catch (e: any) {
+    return { ok: false, error: e?.message ?? 'unknown' };
+  }
+}

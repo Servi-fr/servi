@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { CalendarDays, CalendarPlus, User, Check, X, MessageCircle, Star, Briefcase, MapPin } from 'lucide-react-native';
+import { CalendarDays, CalendarPlus, User, Check, X, MessageCircle, Star, Briefcase, MapPin, FileText } from 'lucide-react-native';
 import { addToCalendar } from '../../lib/calendar';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { StatusBadge } from '../../components/StatusBadge';
@@ -13,10 +13,14 @@ import {
   updateBookingStatus,
   createReview,
   getUserRating,
+  createBillingDoc,
+  getMyProfile,
+  getMyProviderProfile,
   formatDate,
   type BookingRow,
   type BookingStatus,
 } from '../../lib/api';
+import { generateBillingPdf } from '../../lib/invoice';
 
 export default function BookingDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -83,6 +87,32 @@ export default function BookingDetail() {
       return;
     }
     setB({ ...b, status });
+  }
+
+  async function genDoc(type: 'devis' | 'facture') {
+    if (!b) return;
+    setBusy(true);
+    const [prof, prov] = await Promise.all([getMyProfile(), getMyProviderProfile()]);
+    const total = b.price + b.commission;
+    const clientName = b.client?.name ?? otherName ?? 'Client';
+    const rec = await createBillingDoc({ type, bookingId: b.id, clientName, service: b.service, total });
+    if (!rec.ok || !rec.number) {
+      setBusy(false);
+      Alert.alert('Document', 'Création impossible. Réessayez.');
+      return;
+    }
+    const r = await generateBillingPdf({
+      type,
+      number: rec.number,
+      date: formatDate(b.date),
+      prestataireName: prof?.name ?? 'Prestataire',
+      prestataireSiret: prov?.siret ?? null,
+      clientName,
+      service: b.service,
+      total,
+    });
+    setBusy(false);
+    if (!r.ok) Alert.alert('Document', "La génération du PDF a échoué.");
   }
 
   async function addAgenda() {
@@ -169,6 +199,13 @@ export default function BookingDetail() {
           <Pressable style={s.secondary} onPress={addAgenda}>
             <CalendarPlus size={18} color={colors.link} />
             <Text style={s.secondaryText}>Ajouter à mon agenda</Text>
+          </Pressable>
+        )}
+
+        {amPro && (
+          <Pressable style={s.secondary} disabled={busy} onPress={() => genDoc(b.status === 'COMPLETED' ? 'facture' : 'devis')}>
+            <FileText size={18} color={colors.link} />
+            <Text style={s.secondaryText}>{b.status === 'COMPLETED' ? 'Générer la facture (PDF)' : 'Générer un devis (PDF)'}</Text>
           </Pressable>
         )}
 
