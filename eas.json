@@ -31,7 +31,7 @@
       "ios": { "ascAppId": "6783919397" }
     },
     "production-pro": {
-      "ios": {}
+      "ios": { "ascAppId": "6785066956" }
     }
   }
 }
