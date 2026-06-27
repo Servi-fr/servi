@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { TrendingUp, Star, CheckCircle2, Clock, ChevronRight, ArrowUpRight, Megaphone } from 'lucide-react-native';
+import { TrendingUp, Star, CheckCircle2, Clock, ChevronRight, ArrowUpRight, Megaphone, FileText } from 'lucide-react-native';
 import { colors, font } from '../../theme/colors';
 import { NotifBell } from '../../components/NotifBell';
 import { initials } from '../../lib/data';
@@ -93,6 +93,15 @@ export default function ProDashboard() {
               {isSpon ? "Vous apparaissez « À la une » sur l'accueil." : "Apparaissez « À la une » sur l'accueil des clients."}
             </Text>
           </View>
+        </Pressable>
+
+        <Pressable style={s.boost} onPress={() => router.push('/facturation')}>
+          <FileText size={20} color={colors.proInk} />
+          <View style={{ flex: 1 }}>
+            <Text style={s.boostTitle}>Facturation</Text>
+            <Text style={s.boostSub}>Vos devis & factures, chiffre d'affaires</Text>
+          </View>
+          <ChevronRight size={20} color={colors.faint} />
         </Pressable>
 
         {pendingCount > 0 && (

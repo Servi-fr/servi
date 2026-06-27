@@ -791,3 +791,28 @@ export async function createBillingDoc(input: {
     return { ok: false, error: e?.message ?? 'unknown' };
   }
 }
+
+export type BillingDocRow = {
+  id: string;
+  type: BillingType;
+  number: string;
+  clientName: string | null;
+  service: string | null;
+  total: number | null;
+  createdAt: string;
+};
+
+export async function getMyBillingDocs(): Promise<BillingDocRow[]> {
+  const uid = await getUid();
+  if (!uid) return [];
+  try {
+    const { data } = await supabase
+      .from('BillingDoc')
+      .select('id,type,number,clientName,service,total,createdAt')
+      .eq('prestataireId', uid)
+      .order('createdAt', { ascending: false });
+    return (data as BillingDocRow[]) ?? [];
+  } catch {
+    return [];
+  }
+}
