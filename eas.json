@@ -29,6 +29,9 @@
   "submit": {
     "production": {
       "ios": { "ascAppId": "6783919397" }
+    },
+    "production-pro": {
+      "ios": {}
     }
   }
 }
