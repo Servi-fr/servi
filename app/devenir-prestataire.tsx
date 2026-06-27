@@ -122,7 +122,11 @@ export default function DevenirPrestataire() {
   }
 
   const rateNum = parseInt(rate, 10);
-  const ready = service.length > 0 && rateNum > 0 && zone.trim().length > 1;
+  // Guidage : on sait précisément ce qui manque pour publier (cf. règle 8 — gestion des erreurs).
+  const missing: string[] = [];
+  if (!(rateNum > 0)) missing.push('le tarif horaire');
+  if (zone.trim().length <= 1) missing.push("la ville d'intervention");
+  const ready = service.length > 0 && missing.length === 0;
 
   async function save() {
     if (!ready) return;
@@ -213,7 +217,7 @@ export default function DevenirPrestataire() {
             )}
             {!!siret && <Text style={s.siretOk}>✓ SIRET {siret} enregistré</Text>}
 
-            <Text style={s.label}>Métier</Text>
+            <Text style={s.label}>Métier <Text style={s.req}>*</Text></Text>
             <View style={s.chips}>
               {categories.map((c) => {
                 const active = c.name === service;
@@ -225,7 +229,7 @@ export default function DevenirPrestataire() {
               })}
             </View>
 
-            <Text style={s.label}>Tarif horaire (€)</Text>
+            <Text style={s.label}>Tarif horaire (€) <Text style={s.req}>*</Text></Text>
             <TextInput
               value={rate}
               onChangeText={setRate}
@@ -245,7 +249,7 @@ export default function DevenirPrestataire() {
               style={s.input}
             />
 
-            <Text style={s.label}>Ville d'intervention</Text>
+            <Text style={s.label}>Ville d'intervention <Text style={s.req}>*</Text></Text>
             <TextInput
               value={zone}
               onChangeText={setZone}
@@ -325,9 +329,16 @@ export default function DevenirPrestataire() {
               {saving ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={s.btnText}>{editing ? 'Enregistrer' : 'Publier mon profil'}</Text>
+                <Text style={s.btnText}>
+                  {ready
+                    ? editing
+                      ? 'Enregistrer'
+                      : 'Publier mon profil'
+                    : `Renseignez ${missing.join(' et ')}`}
+                </Text>
               )}
             </Pressable>
+            <Text style={s.reqLegend}>* Champs obligatoires</Text>
           </ScrollView>
         )}
       </KeyboardAvoidingView>
@@ -341,6 +352,8 @@ const s = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   intro: { fontFamily: font.body, fontSize: 14.5, color: colors.muted, lineHeight: 22, marginBottom: 20 },
   label: { fontFamily: font.semi, fontSize: 14, color: colors.ink, marginTop: 18, marginBottom: 10 },
+  req: { color: colors.blue, fontFamily: font.semi },
+  reqLegend: { fontFamily: font.body, fontSize: 12, color: colors.faint, textAlign: 'center', marginTop: 10 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line3 },
   chipOn: { backgroundColor: colors.proInk, borderColor: colors.proInk },
