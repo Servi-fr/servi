@@ -8,9 +8,17 @@ module.exports = ({ config }) => {
   return {
     ...config,
     name: 'SERVI Pro',
+    icon: './assets/icon-pro.png', // icône dédiée Pro : marque blanche sur fond noir
     ios: { ...config.ios, bundleIdentifier: 'com.whalesrecords.serviapp.pro' },
-    android: { ...config.android, package: 'com.whalesrecords.serviapp.pro' },
+    android: {
+      ...config.android,
+      package: 'com.whalesrecords.serviapp.pro',
+      adaptiveIcon: {
+        ...(config.android && config.android.adaptiveIcon),
+        backgroundColor: '#000000',
+        foregroundImage: './assets/android-icon-foreground-pro.png',
+      },
+    },
     extra: { ...config.extra, appVariant: 'pro' }, // lu au runtime par lib/variant.ts
-    // (icône dédiée Pro à ajouter plus tard ; pour l'instant on réutilise celle de base)
   };
 };
