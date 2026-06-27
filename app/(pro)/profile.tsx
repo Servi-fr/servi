@@ -9,7 +9,6 @@ import {
   Settings,
   CreditCard,
   HelpCircle,
-  ArrowLeftRight,
   LogOut,
   ChevronRight,
   FileText,
@@ -18,7 +17,6 @@ import {
 import { supabase } from '../../lib/supabase';
 import { colors, font } from '../../theme/colors';
 import { initials } from '../../lib/data';
-import { IS_CLIENT } from '../../lib/variant';
 import { getMyProfile, getMyProviderProfile, getProBookings, type ProviderProfile } from '../../lib/api';
 
 export default function ProProfile() {
@@ -110,13 +108,6 @@ export default function ProProfile() {
           ))}
         </View>
 
-        {IS_CLIENT && (
-          <Pressable style={s.switch} onPress={() => router.replace('/(tabs)')}>
-            <ArrowLeftRight size={18} color={colors.link} />
-            <Text style={s.switchText}>Passer à l'espace client</Text>
-          </Pressable>
-        )}
-
         <Pressable onPress={logout} style={s.logout}>
           <LogOut size={18} color="#dc2626" />
           <Text style={s.logoutText}>Se déconnecter</Text>
@@ -149,8 +140,6 @@ const s = StyleSheet.create({
   rowBorder: { borderTopWidth: 1, borderTopColor: colors.line },
   rowIcon: { width: 34, height: 34, borderRadius: 11, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
   rowLabel: { flex: 1, fontFamily: font.semi, fontSize: 15, color: colors.ink },
-  switch: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 16, paddingVertical: 15, borderRadius: 14, borderWidth: 1, borderColor: colors.line3, backgroundColor: colors.surface },
-  switchText: { fontFamily: font.semi, fontSize: 15, color: colors.link },
-  logout: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 14, paddingVertical: 14 },
+  logout: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 16, paddingVertical: 14 },
   logoutText: { fontFamily: font.semi, fontSize: 15, color: '#dc2626' },
 });

@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { LogOut, CalendarDays, CreditCard, Heart, ChevronRight, ArrowLeftRight, FileText, MessageCircle, Crown, Percent, MapPin, type LucideIcon } from 'lucide-react-native';
+import { LogOut, CalendarDays, CreditCard, Heart, ChevronRight, FileText, MessageCircle, Crown, Percent, MapPin, type LucideIcon } from 'lucide-react-native';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '../../lib/supabase';
 import { colors, font } from '../../theme/colors';
-import { getMyProviderProfile, getMyProfile } from '../../lib/api';
+import { getMyProfile } from '../../lib/api';
 
 const items: { label: string; Icon: LucideIcon; route?: string }[] = [
   { label: 'Passer Premium', Icon: Crown, route: '/premium' },
@@ -22,12 +22,10 @@ const items: { label: string; Icon: LucideIcon; route?: string }[] = [
 export default function Profile() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
-  const [isProvider, setIsProvider] = useState(false);
   const [image, setImage] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
-    getMyProviderProfile().then((p) => setIsProvider(!!p));
     getMyProfile().then((p) => setImage(p?.image ?? null));
   }, []);
 
@@ -79,13 +77,10 @@ export default function Profile() {
           ))}
         </View>
 
-        <Pressable
-          style={s.switch}
-          onPress={() => router.push(isProvider ? '/(pro)/dashboard' : '/devenir-prestataire')}
-        >
-          <ArrowLeftRight size={18} color={colors.proInk} />
-          <Text style={s.switchText}>{isProvider ? 'Espace prestataire' : 'Devenir prestataire'}</Text>
-        </Pressable>
+        <View style={s.proHint}>
+          <Text style={s.proHintText}>Vous proposez des services ?</Text>
+          <Text style={s.proHintSub}>Gérez votre activité sur l'application SERVI Pro, dédiée aux prestataires.</Text>
+        </View>
 
         <Pressable onPress={logout} style={s.logout}>
           <LogOut size={18} color="#dc2626" />
@@ -118,8 +113,9 @@ const s = StyleSheet.create({
   menuRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 16 },
   menuBorder: { borderTopWidth: 1, borderTopColor: colors.line },
   menuLabel: { flex: 1, fontFamily: font.semi, fontSize: 15, color: colors.ink },
-  switch: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 16, paddingVertical: 15, borderRadius: 14, borderWidth: 1, borderColor: colors.line3, backgroundColor: colors.surface },
-  switchText: { fontFamily: font.semi, fontSize: 15, color: colors.proInk },
+  proHint: { marginTop: 16, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 14, borderWidth: 1, borderColor: colors.line3, backgroundColor: colors.surface },
+  proHintText: { fontFamily: font.semi, fontSize: 14, color: colors.ink },
+  proHintSub: { fontFamily: font.body, fontSize: 12.5, color: colors.muted, marginTop: 3, lineHeight: 18 },
   logout: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 14, paddingVertical: 14 },
   logoutText: { fontFamily: font.semi, fontSize: 15, color: '#dc2626' },
 });
