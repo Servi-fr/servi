@@ -20,6 +20,10 @@
     "production": {
       "autoIncrement": true,
       "ios": { "image": "latest" }
+    },
+    "production-pro": {
+      "extends": "production",
+      "env": { "APP_VARIANT": "pro" }
     }
   },
   "submit": {
