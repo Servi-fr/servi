@@ -4,6 +4,7 @@ import { Redirect } from 'expo-router';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { registerForPush } from '../lib/push';
+import { IS_PRO } from '../lib/variant';
 import { colors } from '../theme/colors';
 
 export default function Index() {
@@ -27,5 +28,7 @@ export default function Index() {
     );
   }
 
-  return <Redirect href={session ? '/(tabs)' : '/sign-in'} />;
+  if (!session) return <Redirect href="/sign-in" />;
+  // SERVI Pro ouvre directement sur l'espace prestataire ; SERVI (client) sur les onglets client.
+  return <Redirect href={IS_PRO ? '/(pro)/dashboard' : '/(tabs)'} />;
 }

@@ -10,6 +10,7 @@ module.exports = ({ config }) => {
     name: 'SERVI Pro',
     ios: { ...config.ios, bundleIdentifier: 'com.whalesrecords.serviapp.pro' },
     android: { ...config.android, package: 'com.whalesrecords.serviapp.pro' },
+    extra: { ...config.extra, appVariant: 'pro' }, // lu au runtime par lib/variant.ts
     // (icône dédiée Pro à ajouter plus tard ; pour l'instant on réutilise celle de base)
   };
 };

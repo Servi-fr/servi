@@ -18,6 +18,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { colors, font } from '../../theme/colors';
 import { initials } from '../../lib/data';
+import { IS_CLIENT } from '../../lib/variant';
 import { getMyProfile, getMyProviderProfile, getProBookings, type ProviderProfile } from '../../lib/api';
 
 export default function ProProfile() {
@@ -109,10 +110,12 @@ export default function ProProfile() {
           ))}
         </View>
 
-        <Pressable style={s.switch} onPress={() => router.replace('/(tabs)')}>
-          <ArrowLeftRight size={18} color={colors.link} />
-          <Text style={s.switchText}>Passer à l'espace client</Text>
-        </Pressable>
+        {IS_CLIENT && (
+          <Pressable style={s.switch} onPress={() => router.replace('/(tabs)')}>
+            <ArrowLeftRight size={18} color={colors.link} />
+            <Text style={s.switchText}>Passer à l'espace client</Text>
+          </Pressable>
+        )}
 
         <Pressable onPress={logout} style={s.logout}>
           <LogOut size={18} color="#dc2626" />

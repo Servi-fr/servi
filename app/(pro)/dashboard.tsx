@@ -2,11 +2,11 @@ import { useCallback, useState } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { TrendingUp, Star, CheckCircle2, Clock, ChevronRight, ArrowUpRight, Megaphone, FileText } from 'lucide-react-native';
+import { TrendingUp, Star, CheckCircle2, Clock, ChevronRight, ArrowUpRight, Megaphone, FileText, Rocket } from 'lucide-react-native';
 import { colors, font } from '../../theme/colors';
 import { NotifBell } from '../../components/NotifBell';
 import { initials } from '../../lib/data';
-import { getProBookings, getMyProfile, boostMyListing, isMyListingSponsored, type BookingRow } from '../../lib/api';
+import { getProBookings, getMyProfile, getMyProviderProfile, boostMyListing, isMyListingSponsored, type BookingRow } from '../../lib/api';
 
 function isToday(iso: string) {
   const d = new Date(iso);
@@ -23,6 +23,7 @@ export default function ProDashboard() {
   const [bookings, setBookings] = useState<BookingRow[] | null>(null);
   const [name, setName] = useState('Prestataire');
   const [isSpon, setIsSpon] = useState(false);
+  const [hasProfile, setHasProfile] = useState<boolean | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -30,6 +31,7 @@ export default function ProDashboard() {
       getProBookings().then((b) => active && setBookings(b));
       getMyProfile().then((p) => active && p?.name && setName(p.name));
       isMyListingSponsored().then((v) => active && setIsSpon(v));
+      getMyProviderProfile().then((p) => active && setHasProfile(!!p));
       return () => {
         active = false;
       };
@@ -59,6 +61,19 @@ export default function ProDashboard() {
             </View>
           </View>
         </View>
+
+        {hasProfile === false && (
+          <Pressable style={s.setup} onPress={() => router.push('/devenir-prestataire')}>
+            <View style={s.setupIcon}>
+              <Rocket size={20} color="#fff" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.setupTitle}>Activez votre activité</Text>
+              <Text style={s.setupSub}>Créez votre fiche prestataire pour recevoir des demandes.</Text>
+            </View>
+            <ChevronRight size={20} color="#fff" />
+          </Pressable>
+        )}
 
         <View style={s.hero}>
           <Text style={s.heroLabel}>Revenus (prestations terminées)</Text>
@@ -166,6 +181,10 @@ const s = StyleSheet.create({
   name: { fontFamily: font.display, fontSize: 24, color: colors.proInk, letterSpacing: -0.5, marginTop: 2 },
   avatar: { width: 48, height: 48, borderRadius: 15, backgroundColor: colors.proInk, alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontFamily: font.display, fontSize: 16, color: '#fff' },
+  setup: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.proInk, borderRadius: 18, padding: 16, marginBottom: 14 },
+  setupIcon: { width: 40, height: 40, borderRadius: 13, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' },
+  setupTitle: { fontFamily: font.semi, fontSize: 15.5, color: '#fff' },
+  setupSub: { fontFamily: font.body, fontSize: 12.5, color: '#aeb6c6', marginTop: 2 },
   hero: { backgroundColor: colors.proInk, borderRadius: 22, padding: 22 },
   heroLabel: { fontFamily: font.medium, fontSize: 13, color: '#aeb6c6' },
   heroValue: { fontFamily: font.display, fontSize: 34, color: '#fff', letterSpacing: -1, marginTop: 6 },
