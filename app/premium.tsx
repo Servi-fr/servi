@@ -101,8 +101,14 @@ export default function Premium() {
                 <Text style={s.activeText}>Vous êtes déjà {isPro ? 'Pro' : 'Premium'} — merci !</Text>
               </View>
             ) : (
-              <Pressable style={[s.cta, busy && s.ctaOff]} disabled={busy} onPress={subscribe}>
-                {busy ? <ActivityIndicator color="#fff" /> : <Text style={s.ctaText}>Passer {isPro ? 'Pro' : 'Premium'}</Text>}
+              <Pressable style={[s.cta, (busy || !config.paymentsEnabled) && s.ctaOff]} disabled={busy} onPress={subscribe}>
+                {busy ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={s.ctaText}>
+                    {config.paymentsEnabled ? `Passer ${isPro ? 'Pro' : 'Premium'}` : 'Bientôt disponible'}
+                  </Text>
+                )}
               </Pressable>
             )}
 

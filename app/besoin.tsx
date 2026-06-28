@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, ScrollView, Pressable, TextInput, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MapPin, Check, Search } from 'lucide-react-native';
@@ -46,7 +46,7 @@ export default function Besoin() {
   async function submit() {
     if (!ready || submitting) return;
     setSubmitting(true);
-    await createServiceRequest({
+    const result = await createServiceRequest({
       category,
       frequency: frequency || undefined,
       details: details.trim() || undefined,
@@ -55,6 +55,11 @@ export default function Besoin() {
       lng: selected?.lng,
     });
     setSubmitting(false);
+    // Échec → on le dit (plus de faux « succès »).
+    if (!result.ok) {
+      Alert.alert('Envoi impossible', "Votre besoin n'a pas pu être envoyé. Vérifiez votre connexion et réessayez.");
+      return;
+    }
     router.replace(`/category/${category}`);
   }
 
@@ -136,6 +141,9 @@ export default function Besoin() {
               ))}
             </View>
           )}
+          {!selected && !searching && suggestions.length === 0 && addr.trim().length >= 3 && (
+            <Text style={s.addrHint}>Aucune adresse trouvée — vérifiez l'orthographe.</Text>
+          )}
         </ScrollView>
 
         <View style={s.ctaBar}>
@@ -145,7 +153,7 @@ export default function Besoin() {
             ) : (
               <>
                 <Search size={18} color="#fff" />
-                <Text style={s.ctaText}>Voir les prestataires</Text>
+                <Text style={s.ctaText}>{ready ? 'Voir les prestataires' : "Choisissez d'abord un service"}</Text>
               </>
             )}
           </Pressable>
@@ -173,6 +181,7 @@ const s = StyleSheet.create({
   suggestRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 13, paddingHorizontal: 14 },
   suggestBorder: { borderTopWidth: 1, borderTopColor: colors.line },
   suggestText: { flex: 1, fontFamily: font.body, fontSize: 14, color: colors.ink },
+  addrHint: { fontFamily: font.body, fontSize: 12.5, color: colors.faint, marginTop: 8 },
   ctaBar: { backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.line3, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 28 },
   cta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.blue, borderRadius: 14, paddingVertical: 16 },
   ctaOff: { backgroundColor: colors.faint },

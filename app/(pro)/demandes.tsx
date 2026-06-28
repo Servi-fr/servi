@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import { CalendarDays, MapPin, Check, X, Inbox } from 'lucide-react-native';
@@ -47,9 +47,15 @@ export default function ProDemandes() {
   );
 
   async function act(card: Card, decision: Status) {
-    setStatuses((p) => ({ ...p, [card.id]: decision }));
+    const prev = statuses[card.id] ?? 'pending';
+    setStatuses((p) => ({ ...p, [card.id]: decision })); // optimiste
     if (card.live) {
-      await updateBookingStatus(card.id, decision === 'accepted' ? 'CONFIRMED' : 'CANCELLED');
+      const r = await updateBookingStatus(card.id, decision === 'accepted' ? 'CONFIRMED' : 'CANCELLED');
+      if (!r.ok) {
+        // Échec serveur → on annule l'affichage optimiste et on le dit.
+        setStatuses((p) => ({ ...p, [card.id]: prev }));
+        Alert.alert('Action impossible', "La réservation n'a pas pu être mise à jour. Réessayez.");
+      }
     }
   }
 

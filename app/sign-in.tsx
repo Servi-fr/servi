@@ -22,6 +22,7 @@ export default function SignIn() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const canSubmit = email.trim().length > 0 && password.length > 0;
 
   async function handleLogin() {
     setLoading(true);
@@ -68,7 +69,11 @@ export default function SignIn() {
 
             {error && <Text style={s.error}>{error}</Text>}
 
-            <Pressable onPress={handleLogin} disabled={loading} style={[s.btn, loading && { opacity: 0.6 }]}>
+            <Pressable
+              onPress={handleLogin}
+              disabled={loading || !canSubmit}
+              style={[s.btn, (loading || !canSubmit) && { opacity: 0.5 }]}
+            >
               {loading ? <ActivityIndicator color="#fff" /> : <Text style={s.btnText}>Se connecter</Text>}
             </Pressable>
           </View>
