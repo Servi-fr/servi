@@ -193,7 +193,7 @@ const s = StyleSheet.create({
   kpiRow: { flexDirection: 'row', gap: 10, marginTop: 14 },
   kpi: { flex: 1, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 16, paddingVertical: 16, alignItems: 'center', gap: 5 },
   kpiValue: { fontFamily: font.displaySemi, fontSize: 19, color: colors.proInk },
-  kpiLabel: { fontFamily: font.body, fontSize: 11.5, color: colors.faint },
+  kpiLabel: { fontFamily: font.body, fontSize: 11.5, color: colors.muted },
   boost: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line3, borderRadius: 16, padding: 14, marginTop: 14 },
   boostOn: { backgroundColor: colors.okBg, borderColor: colors.okBg },
   boostTitle: { fontFamily: font.semi, fontSize: 15, color: colors.ink },
@@ -210,5 +210,5 @@ const s = StyleSheet.create({
   missionTimeText: { fontFamily: font.semi, fontSize: 13, color: '#fff' },
   missionClient: { fontFamily: font.semi, fontSize: 15, color: colors.ink },
   missionService: { fontFamily: font.body, fontSize: 13, color: colors.muted, marginTop: 1 },
-  empty: { fontFamily: font.body, fontSize: 14, color: colors.faint },
+  empty: { fontFamily: font.body, fontSize: 14, color: colors.muted },
 });

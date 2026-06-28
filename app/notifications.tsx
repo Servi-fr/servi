@@ -65,7 +65,7 @@ const s = StyleSheet.create({
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.blue },
   title: { fontFamily: font.semi, fontSize: 15, color: colors.ink },
   msg: { fontFamily: font.body, fontSize: 13.5, color: colors.muted, marginTop: 3, lineHeight: 19 },
-  time: { fontFamily: font.medium, fontSize: 12, color: colors.faint, marginTop: 6 },
+  time: { fontFamily: font.medium, fontSize: 12, color: colors.muted, marginTop: 6 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
   iconBox: { width: 56, height: 56, borderRadius: 16, backgroundColor: colors.chip, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
   emptyTitle: { fontFamily: font.displaySemi, fontSize: 19, color: colors.ink, marginBottom: 8 },

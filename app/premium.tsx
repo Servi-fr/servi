@@ -140,5 +140,5 @@ const s = StyleSheet.create({
   ctaText: { color: '#fff', fontFamily: font.semi, fontSize: 16 },
   activeBox: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.okBg, borderRadius: 14, paddingVertical: 16, marginTop: 20 },
   activeText: { fontFamily: font.semi, fontSize: 15, color: colors.okText },
-  legal: { fontFamily: font.body, fontSize: 12, color: colors.faint, textAlign: 'center', marginTop: 14, lineHeight: 18 },
+  legal: { fontFamily: font.body, fontSize: 12, color: colors.muted, textAlign: 'center', marginTop: 14, lineHeight: 18 },
 });

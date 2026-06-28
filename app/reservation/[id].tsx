@@ -476,11 +476,11 @@ const s = StyleSheet.create({
   optLabel: { flex: 1, fontFamily: font.medium, fontSize: 15, color: colors.muted },
   optLabelOn: { fontFamily: font.semi, color: colors.ink },
   optPrice: { fontFamily: font.semi, fontSize: 14, color: colors.ink },
-  optUnit: { fontFamily: font.body, fontSize: 12, color: colors.faint },
+  optUnit: { fontFamily: font.body, fontSize: 12, color: colors.muted },
 
   dayChip: { width: 60, paddingVertical: 12, borderRadius: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line3, alignItems: 'center' },
   dayChipOn: { backgroundColor: colors.blue, borderColor: colors.blue },
-  dayWd: { fontFamily: font.medium, fontSize: 12, color: colors.faint },
+  dayWd: { fontFamily: font.medium, fontSize: 12, color: colors.muted },
   dayNum: { fontFamily: font.display, fontSize: 18, color: colors.ink, marginTop: 2 },
   dayTextOn: { color: '#fff' },
 
@@ -499,7 +499,7 @@ const s = StyleSheet.create({
   suggestRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 13, paddingHorizontal: 14 },
   suggestBorder: { borderTopWidth: 1, borderTopColor: colors.line },
   suggestText: { flex: 1, fontFamily: font.body, fontSize: 14, color: colors.ink },
-  addrHint: { fontFamily: font.body, fontSize: 12.5, color: colors.faint, marginTop: 8 },
+  addrHint: { fontFamily: font.body, fontSize: 12.5, color: colors.muted, marginTop: 8 },
   savedRow: { gap: 8, paddingBottom: 10 },
   savedChip: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line3, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 8 },
   savedChipOn: { backgroundColor: colors.blue, borderColor: colors.blue },
@@ -517,7 +517,7 @@ const s = StyleSheet.create({
   sumValueBold: { fontFamily: font.display, fontSize: 18, color: colors.ink },
   sumLabelCredit: { color: colors.okText },
   sumValueCredit: { color: colors.okText, fontFamily: font.semi },
-  sapNote: { fontFamily: font.body, fontSize: 11, color: colors.faint, marginTop: 8, lineHeight: 16 },
+  sapNote: { fontFamily: font.body, fontSize: 11, color: colors.muted, marginTop: 8, lineHeight: 16 },
   summaryDivider: { height: 1, backgroundColor: colors.line, marginVertical: 8 },
 
   ctaBar: { backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.line3, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 28 },

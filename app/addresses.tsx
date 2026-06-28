@@ -182,7 +182,7 @@ const s = StyleSheet.create({
   scroll: { paddingHorizontal: 20, paddingBottom: 32 },
   lead: { fontFamily: font.body, fontSize: 14, color: colors.muted, lineHeight: 21 },
   loading: { paddingTop: 40, alignItems: 'center' },
-  empty: { fontFamily: font.body, fontSize: 14, color: colors.faint, marginTop: 18 },
+  empty: { fontFamily: font.body, fontSize: 14, color: colors.muted, marginTop: 18 },
   card: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 16, padding: 14 },
   cardIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: colors.chip, alignItems: 'center', justifyContent: 'center' },
   cardLabel: { fontFamily: font.semi, fontSize: 15, color: colors.ink },

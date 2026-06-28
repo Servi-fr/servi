@@ -39,5 +39,5 @@ const s = StyleSheet.create({
   border: { borderTopWidth: 1, borderTopColor: colors.line },
   icon: { width: 34, height: 34, borderRadius: 11, backgroundColor: colors.chip, alignItems: 'center', justifyContent: 'center' },
   label: { flex: 1, fontFamily: font.semi, fontSize: 15, color: colors.ink },
-  note: { fontFamily: font.body, fontSize: 12.5, color: colors.faint, textAlign: 'center', marginTop: 18, lineHeight: 18 },
+  note: { fontFamily: font.body, fontSize: 12.5, color: colors.muted, textAlign: 'center', marginTop: 18, lineHeight: 18 },
 });

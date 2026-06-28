@@ -242,13 +242,13 @@ const s = StyleSheet.create({
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 10 },
   rating: { fontFamily: font.semi, fontSize: 14, color: colors.ink },
   reviews: { fontFamily: font.body, fontSize: 13.5, color: colors.muted },
-  city: { fontFamily: font.body, fontSize: 13.5, color: colors.faint },
+  city: { fontFamily: font.body, fontSize: 13.5, color: colors.muted },
 
   stats: { flexDirection: 'row', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 18, paddingVertical: 16 },
   stat: { flex: 1, alignItems: 'center' },
   statValueRow: { flexDirection: 'row', alignItems: 'center' },
   statValue: { fontFamily: font.displaySemi, fontSize: 18, color: colors.ink },
-  statLabel: { fontFamily: font.body, fontSize: 12, color: colors.faint, marginTop: 3 },
+  statLabel: { fontFamily: font.body, fontSize: 12, color: colors.muted, marginTop: 3 },
   statDivider: { width: 1, backgroundColor: colors.line, marginVertical: 6 },
 
   section: { fontFamily: font.display, fontSize: 18, color: colors.ink, letterSpacing: -0.4, marginTop: 24, marginBottom: 10 },
@@ -260,7 +260,7 @@ const s = StyleSheet.create({
   svcCheck: { width: 26, height: 26, borderRadius: 9, backgroundColor: colors.chip, alignItems: 'center', justifyContent: 'center' },
   svcLabel: { flex: 1, fontFamily: font.medium, fontSize: 15, color: colors.ink },
   svcPrice: { fontFamily: font.semi, fontSize: 15, color: colors.ink },
-  svcUnit: { fontFamily: font.body, fontSize: 12.5, color: colors.faint },
+  svcUnit: { fontFamily: font.body, fontSize: 12.5, color: colors.muted },
 
   certWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   certChip: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line3, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
@@ -276,7 +276,7 @@ const s = StyleSheet.create({
   reviewAvatar: { width: 38, height: 38, borderRadius: 12, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
   reviewInitials: { fontFamily: font.semi, fontSize: 13, color: colors.muted },
   reviewAuthor: { fontFamily: font.semi, fontSize: 14, color: colors.ink },
-  reviewDate: { fontFamily: font.body, fontSize: 12, color: colors.faint, marginTop: 1 },
+  reviewDate: { fontFamily: font.body, fontSize: 12, color: colors.muted, marginTop: 1 },
   reviewStars: { flexDirection: 'row', gap: 1 },
   reviewText: { fontFamily: font.body, fontSize: 13.5, color: colors.muted, lineHeight: 21 },
 
@@ -295,7 +295,7 @@ const s = StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 28,
   },
-  ctaFrom: { fontFamily: font.body, fontSize: 12, color: colors.faint },
+  ctaFrom: { fontFamily: font.body, fontSize: 12, color: colors.muted },
   ctaPrice: { fontFamily: font.display, fontSize: 22, color: colors.ink },
   ctaBtn: { backgroundColor: colors.blue, borderRadius: 14, paddingVertical: 15, paddingHorizontal: 40 },
   ctaBtnText: { color: '#fff', fontFamily: font.semi, fontSize: 16 },

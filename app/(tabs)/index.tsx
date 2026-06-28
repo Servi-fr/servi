@@ -158,5 +158,5 @@ const s = StyleSheet.create({
     marginBottom: 14,
   },
   cardTitle: { fontFamily: font.semi, fontSize: 16, color: colors.ink },
-  cardCount: { fontFamily: font.body, fontSize: 13, color: colors.faint, marginTop: 2 },
+  cardCount: { fontFamily: font.body, fontSize: 13, color: colors.muted, marginTop: 2 },
 });

@@ -33,6 +33,6 @@ export default function LegalDocScreen() {
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   scroll: { paddingHorizontal: 22, paddingTop: 8, paddingBottom: 36 },
-  updated: { fontFamily: font.medium, fontSize: 12.5, color: colors.faint, marginBottom: 16 },
+  updated: { fontFamily: font.medium, fontSize: 12.5, color: colors.muted, marginBottom: 16 },
   para: { fontFamily: font.body, fontSize: 14.5, color: colors.ink, lineHeight: 22, marginBottom: 14 },
 });

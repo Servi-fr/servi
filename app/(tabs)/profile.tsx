@@ -108,7 +108,7 @@ const s = StyleSheet.create({
   avatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.link, alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontFamily: font.display, fontSize: 18, color: '#fff' },
   name: { fontFamily: font.semi, fontSize: 17, color: colors.ink },
-  email: { fontFamily: font.body, fontSize: 13, color: colors.faint, marginTop: 2 },
+  email: { fontFamily: font.body, fontSize: 13, color: colors.muted, marginTop: 2 },
   menu: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 18, marginTop: 16, paddingHorizontal: 16 },
   menuRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 16 },
   menuBorder: { borderTopWidth: 1, borderTopColor: colors.line },

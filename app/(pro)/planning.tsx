@@ -120,5 +120,5 @@ const s = StyleSheet.create({
   client: { fontFamily: font.semi, fontSize: 15, color: colors.ink },
   service: { fontFamily: font.body, fontSize: 13.5, color: colors.muted, marginTop: 4 },
   cityRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
-  city: { fontFamily: font.medium, fontSize: 12.5, color: colors.faint },
+  city: { fontFamily: font.medium, fontSize: 12.5, color: colors.muted },
 });

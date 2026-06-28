@@ -181,7 +181,7 @@ const s = StyleSheet.create({
   suggestRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 13, paddingHorizontal: 14 },
   suggestBorder: { borderTopWidth: 1, borderTopColor: colors.line },
   suggestText: { flex: 1, fontFamily: font.body, fontSize: 14, color: colors.ink },
-  addrHint: { fontFamily: font.body, fontSize: 12.5, color: colors.faint, marginTop: 8 },
+  addrHint: { fontFamily: font.body, fontSize: 12.5, color: colors.muted, marginTop: 8 },
   ctaBar: { backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.line3, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 28 },
   cta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.blue, borderRadius: 14, paddingVertical: 16 },
   ctaOff: { backgroundColor: colors.faint },

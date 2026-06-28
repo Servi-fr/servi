@@ -99,7 +99,7 @@ const s = StyleSheet.create({
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
   service: { fontFamily: font.semi, fontSize: 16, color: colors.ink },
   pro: { fontFamily: font.body, fontSize: 13.5, color: colors.muted, marginTop: 2 },
-  date: { fontFamily: font.medium, fontSize: 13, color: colors.faint, marginTop: 6 },
+  date: { fontFamily: font.medium, fontSize: 13, color: colors.muted, marginTop: 6 },
   price: { fontFamily: font.display, fontSize: 17, color: colors.ink, marginTop: 8 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 30, paddingTop: 60 },
   emptyIcon: { width: 56, height: 56, borderRadius: 16, backgroundColor: colors.chip, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },

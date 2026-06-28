@@ -119,7 +119,7 @@ const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scroll: { paddingHorizontal: 16, paddingVertical: 12, gap: 8, flexGrow: 1 },
-  hint: { textAlign: 'center', marginTop: 40, fontFamily: font.body, fontSize: 14, color: colors.faint },
+  hint: { textAlign: 'center', marginTop: 40, fontFamily: font.body, fontSize: 14, color: colors.muted },
   bubbleRow: { flexDirection: 'row' },
   left: { justifyContent: 'flex-start' },
   right: { justifyContent: 'flex-end' },
