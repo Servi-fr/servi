@@ -15,7 +15,12 @@
     },
     "preview": {
       "distribution": "internal",
+      "android": { "buildType": "apk" },
       "ios": { "image": "latest" }
+    },
+    "preview-pro": {
+      "extends": "preview",
+      "env": { "APP_VARIANT": "pro" }
     },
     "production": {
       "autoIncrement": true,
