@@ -1,7 +1,17 @@
 // Design tokens SERVI « 01 Lumière » pour l'app native.
+import { IS_PRO } from '../lib/variant';
+
+// Accent principal VARIANT-AWARE : bleu côté client, noir côté Pro.
+// Les écrans partagés (réservation, chat, profil, facturation…) adoptent ainsi
+// automatiquement l'identité visuelle de leur app → jamais de bleu « client »
+// dans l'app Pro (et inversement). Évite toute confusion entre les deux apps.
+const CLIENT_BLUE = '#3366ff';
+const CLIENT_LINK = '#2347d9';
+const PRO_INK = '#0f172a';
+
 export const colors = {
-  blue: '#3366ff',
-  link: '#2347d9',
+  blue: IS_PRO ? PRO_INK : CLIENT_BLUE,
+  link: IS_PRO ? PRO_INK : CLIENT_LINK,
   deep: '#1e2f8f',
   deep2: '#1a2a6b',
   night: '#16225c',
@@ -13,8 +23,8 @@ export const colors = {
   faint: '#9aa3b5',
   line: '#eef1f7',
   line3: '#e3e8f0',
-  chip: '#eef2ff',
-  proInk: '#0f172a',
+  chip: IS_PRO ? '#e9ebf0' : '#eef2ff', // tuile d'accent : gris neutre en Pro, bleu clair en client
+  proInk: PRO_INK,
   proSidebar: '#0b0f17',
   ok: '#16a34a',
   okBg: '#e8f8f0',
