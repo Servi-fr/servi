@@ -19,6 +19,7 @@ export default function MapScreen() {
   const [pins, setPins] = useState<Pin[]>([]);
   const [loading, setLoading] = useState(true);
   const [cat, setCat] = useState<string | null>(null); // null = tous les métiers
+  const [needLocation, setNeedLocation] = useState(false); // ni géoloc ni adresse profil
 
   useEffect(() => {
     let active = true;
@@ -43,6 +44,8 @@ export default function MapScreen() {
       }
       if (center && active) {
         mapRef.current?.animateToRegion({ ...center, latitudeDelta: 0.25, longitudeDelta: 0.25 }, 700);
+      } else if (active) {
+        setNeedLocation(true); // on n'a pas pu situer l'utilisateur → on le lui dit
       }
 
       const providers = await getProviders();
@@ -80,6 +83,7 @@ export default function MapScreen() {
               coordinate={{ latitude: pin.lat, longitude: pin.lng }}
               anchor={{ x: 0.5, y: 1 }}
               onPress={() => router.push(`/prestataire/${pin.provider.id}`)}
+              accessibilityLabel={`Voir ${pin.provider.name}`}
             >
               <View style={s.pin}>
                 <View style={s.pinCircle}>{Icon ? <Icon size={18} color="#fff" /> : null}</View>
@@ -104,13 +108,25 @@ export default function MapScreen() {
           ))}
         </ScrollView>
 
-        <View style={s.countWrap} pointerEvents="none">
-          <Text style={s.count}>
-            {loading
-              ? 'Recherche des prestataires…'
-              : `${visible.length} prestataire${visible.length > 1 ? 's' : ''}${cat ? ` · ${getCategory(cat)?.name}` : ''}`}
-          </Text>
-        </View>
+        {needLocation && (
+          <View style={s.locBanner}>
+            <Text style={s.locBannerText}>Activez la localisation pour voir les prestataires près de vous.</Text>
+          </View>
+        )}
+
+        {!loading && visible.length === 0 && cat ? (
+          <Pressable style={s.countWrap} onPress={() => setCat(null)}>
+            <Text style={s.count}>Aucun prestataire pour ce métier · Voir tous</Text>
+          </Pressable>
+        ) : (
+          <View style={s.countWrap} pointerEvents="none">
+            <Text style={s.count}>
+              {loading
+                ? 'Recherche des prestataires…'
+                : `${visible.length} prestataire${visible.length > 1 ? 's' : ''}${cat ? ` · ${getCategory(cat)?.name}` : ''}`}
+            </Text>
+          </View>
+        )}
       </SafeAreaView>
     </View>
   );
@@ -134,7 +150,7 @@ const s = StyleSheet.create({
     borderColor: colors.line3,
     borderRadius: 999,
     paddingHorizontal: 15,
-    paddingVertical: 9,
+    paddingVertical: 12,
     shadowColor: '#1e2f8f',
     shadowOpacity: 0.1,
     shadowRadius: 10,
@@ -144,7 +160,9 @@ const s = StyleSheet.create({
   chipOn: { backgroundColor: colors.blue, borderColor: colors.blue },
   chipText: { fontFamily: font.semi, fontSize: 13.5, color: colors.ink },
   chipTextOn: { color: '#fff' },
-  countWrap: { alignSelf: 'center', backgroundColor: 'rgba(13,18,32,0.82)', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6, marginTop: 10 },
+  countWrap: { alignSelf: 'center', backgroundColor: 'rgba(13,18,32,0.82)', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8, marginTop: 10 },
+  locBanner: { marginHorizontal: 14, marginTop: 10, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.line3, paddingHorizontal: 14, paddingVertical: 10 },
+  locBannerText: { fontFamily: font.medium, fontSize: 12.5, color: colors.muted, textAlign: 'center' },
   count: { fontFamily: font.semi, fontSize: 12.5, color: '#fff' },
   pin: { alignItems: 'center' },
   pinCircle: {

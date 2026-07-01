@@ -77,7 +77,7 @@ export default function Home() {
 
         <View style={s.rowBetween}>
           <Text style={s.section}>Explorez par famille</Text>
-          <Pressable onPress={() => router.push('/services')}>
+          <Pressable onPress={() => router.push('/services')} hitSlop={10}>
             <Text style={s.link}>Tous les services</Text>
           </Pressable>
         </View>
@@ -119,7 +119,7 @@ const s = StyleSheet.create({
     paddingVertical: 14,
     marginTop: 18,
   },
-  searchText: { fontFamily: font.medium, fontSize: 15, color: colors.faint },
+  searchText: { fontFamily: font.medium, fontSize: 15, color: colors.muted },
   needCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.blue, borderRadius: 16, padding: 16, marginTop: 12 },
   needIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
   needTitle: { fontFamily: font.semi, fontSize: 15.5, color: '#fff' },

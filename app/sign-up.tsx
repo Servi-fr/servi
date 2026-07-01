@@ -26,8 +26,21 @@ export default function SignUp() {
   const [loading, setLoading] = useState(false);
 
   async function handleSignUp() {
-    setLoading(true);
     setError(null);
+    // Validation locale immédiate (feedback avant l'aller-retour serveur — seuil de Doherty).
+    if (!name.trim()) {
+      setError('Renseignez votre nom.');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError('Adresse email invalide.');
+      return;
+    }
+    if (password.length < 8) {
+      setError('Le mot de passe doit faire au moins 8 caractères.');
+      return;
+    }
+    setLoading(true);
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
@@ -70,11 +83,11 @@ export default function SignUp() {
               </View>
             ) : (
               <>
-                <Text style={s.label}>Nom</Text>
+                <Text style={s.label}>Nom *</Text>
                 <TextInput value={name} onChangeText={setName} placeholder="Votre nom" placeholderTextColor={colors.faint} style={s.input} />
-                <Text style={[s.label, { marginTop: 16 }]}>Email</Text>
+                <Text style={[s.label, { marginTop: 16 }]}>Email *</Text>
                 <TextInput value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" placeholder="vous@email.com" placeholderTextColor={colors.faint} style={s.input} />
-                <Text style={[s.label, { marginTop: 16 }]}>Mot de passe</Text>
+                <Text style={[s.label, { marginTop: 16 }]}>Mot de passe *</Text>
                 <TextInput value={password} onChangeText={setPassword} secureTextEntry placeholder="8 caractères minimum" placeholderTextColor={colors.faint} style={s.input} />
 
                 {error && <Text style={s.error}>{error}</Text>}

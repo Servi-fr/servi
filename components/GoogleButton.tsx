@@ -45,7 +45,7 @@ export function GoogleButton() {
 const s = StyleSheet.create({
   divRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 18 },
   line: { flex: 1, height: 1, backgroundColor: colors.line3 },
-  or: { fontFamily: font.medium, fontSize: 13, color: colors.faint },
+  or: { fontFamily: font.medium, fontSize: 13, color: colors.muted },
   btn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line3, borderRadius: 13, paddingVertical: 14 },
   g: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#fff', borderWidth: 1, borderColor: colors.line3, alignItems: 'center', justifyContent: 'center' },
   gText: { fontFamily: font.bold, fontSize: 14, color: '#4285F4' },

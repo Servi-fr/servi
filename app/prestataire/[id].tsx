@@ -79,7 +79,7 @@ export default function ProviderScreen() {
             <Star size={15} color={colors.star} fill={colors.star} />
             <Text style={s.rating}>{p.rating.toFixed(1)}</Text>
             <Text style={s.reviews}>· {p.reviews} avis</Text>
-            <MapPin size={14} color={colors.faint} style={{ marginLeft: 8 }} />
+            <MapPin size={14} color={colors.muted} style={{ marginLeft: 8 }} />
             <Text style={s.city}>
               {p.city}
               {p.radiusKm ? ` · ${p.radiusKm} km` : ''}

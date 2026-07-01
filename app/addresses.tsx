@@ -98,7 +98,7 @@ export default function Addresses() {
                     {a.address}
                   </Text>
                 </View>
-                <Pressable onPress={() => remove(a)} hitSlop={8}>
+                <Pressable onPress={() => remove(a)} hitSlop={8} accessibilityLabel="Supprimer l'adresse" accessibilityRole="button">
                   <Trash2 size={18} color={colors.faint} />
                 </Pressable>
               </View>

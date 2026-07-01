@@ -12,6 +12,8 @@ export function ScreenHeader({ title, dark = false }: { title?: string; dark?: b
       <Pressable
         onPress={() => router.back()}
         hitSlop={10}
+        accessibilityLabel="Retour"
+        accessibilityRole="button"
         style={[
           s.btn,
           {

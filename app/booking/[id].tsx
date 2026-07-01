@@ -89,6 +89,14 @@ export default function BookingDetail() {
     setB({ ...b, status });
   }
 
+  // Confirmation avant une action irréversible (règle 8 : confirmer avant l'irréversible).
+  function confirmStatus(status: BookingStatus, title: string, message: string, actionLabel: string, destructive = true) {
+    Alert.alert(title, message, [
+      { text: 'Retour', style: 'cancel' },
+      { text: actionLabel, style: destructive ? 'destructive' : 'default', onPress: () => setStatus(status) },
+    ]);
+  }
+
   async function genDoc(type: 'devis' | 'facture') {
     if (!b) return;
     setBusy(true);
@@ -113,6 +121,7 @@ export default function BookingDetail() {
     });
     setBusy(false);
     if (!r.ok) Alert.alert('Document', "La génération du PDF a échoué.");
+    else Alert.alert('Document', `${type === 'facture' ? 'Facture' : 'Devis'} ${rec.number} généré ✓`);
   }
 
   async function addAgenda() {
@@ -212,7 +221,11 @@ export default function BookingDetail() {
         {/* Actions prestataire */}
         {amPro && b.status === 'PENDING' && (
           <View style={s.actions}>
-            <Pressable style={[s.btnGhost]} disabled={busy} onPress={() => setStatus('CANCELLED')}>
+            <Pressable
+              style={[s.btnGhost]}
+              disabled={busy}
+              onPress={() => confirmStatus('CANCELLED', 'Refuser la demande ?', 'Le client sera informé du refus.', 'Refuser')}
+            >
               <X size={17} color={colors.muted} />
               <Text style={s.btnGhostText}>Refuser</Text>
             </Pressable>
@@ -223,7 +236,11 @@ export default function BookingDetail() {
           </View>
         )}
         {amPro && b.status === 'CONFIRMED' && (
-          <Pressable style={s.btnDarkFull} disabled={busy} onPress={() => setStatus('COMPLETED')}>
+          <Pressable
+            style={s.btnDarkFull}
+            disabled={busy}
+            onPress={() => confirmStatus('COMPLETED', 'Marquer comme terminée ?', 'Cette action confirme que la prestation a bien eu lieu.', 'Terminer', false)}
+          >
             <Check size={17} color="#fff" />
             <Text style={s.btnDarkText}>Marquer comme terminée</Text>
           </Pressable>
@@ -231,7 +248,11 @@ export default function BookingDetail() {
 
         {/* Annulation client */}
         {amClient && (b.status === 'PENDING' || b.status === 'CONFIRMED') && (
-          <Pressable style={s.cancel} disabled={busy} onPress={() => setStatus('CANCELLED')}>
+          <Pressable
+            style={s.cancel}
+            disabled={busy}
+            onPress={() => confirmStatus('CANCELLED', 'Annuler la réservation ?', 'Cette réservation sera annulée. Cette action est définitive.', 'Annuler la résa')}
+          >
             <Text style={s.cancelText}>Annuler la réservation</Text>
           </Pressable>
         )}
@@ -242,7 +263,13 @@ export default function BookingDetail() {
             <Text style={s.reviewTitle}>{amClient ? 'Votre avis sur le prestataire' : 'Votre avis sur le client'}</Text>
             <View style={s.stars}>
               {[1, 2, 3, 4, 5].map((n) => (
-                <Pressable key={n} onPress={() => setRating(n)} hitSlop={6}>
+                <Pressable
+                  key={n}
+                  onPress={() => setRating(n)}
+                  hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Noter ${n} étoile${n > 1 ? 's' : ''}`}
+                >
                   <Star size={30} color={colors.star} fill={n <= rating ? colors.star : 'transparent'} />
                 </Pressable>
               ))}

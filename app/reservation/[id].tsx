@@ -164,8 +164,15 @@ export default function ReservationScreen() {
       return;
     }
     if (result.id && askMessage) {
-      await sendMessage(result.id, askMessage);
+      const msgRes = await sendMessage(result.id, askMessage);
       setSubmitting(false);
+      // La demande est créée ; si le message d'accompagnement échoue, on le dit (pas de faux envoi).
+      if (!msgRes.ok) {
+        Alert.alert(
+          'Demande créée',
+          "Votre demande est enregistrée, mais le message n'a pas pu être envoyé. Vous pouvez l'écrire directement dans la conversation.",
+        );
+      }
       router.replace(`/chat/${result.id}`);
       return;
     }
@@ -501,7 +508,7 @@ const s = StyleSheet.create({
   suggestText: { flex: 1, fontFamily: font.body, fontSize: 14, color: colors.ink },
   addrHint: { fontFamily: font.body, fontSize: 12.5, color: colors.muted, marginTop: 8 },
   savedRow: { gap: 8, paddingBottom: 10 },
-  savedChip: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line3, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 8 },
+  savedChip: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line3, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 12 },
   savedChipOn: { backgroundColor: colors.blue, borderColor: colors.blue },
   savedChipText: { fontFamily: font.semi, fontSize: 13, color: colors.ink },
   savedChipTextOn: { color: '#fff' },

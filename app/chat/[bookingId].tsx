@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
@@ -54,10 +55,16 @@ export default function Chat() {
     const text = input.trim();
     if (!text || sending) return;
     setSending(true);
-    setInput('');
-    await sendMessage(bookingId, text);
-    await reload();
+    setInput(''); // vidage optimiste
+    const r = await sendMessage(bookingId, text);
     setSending(false);
+    // Échec → on restaure le message tapé (pas de perte) et on prévient.
+    if (!r.ok) {
+      setInput(text);
+      Alert.alert('Message non envoyé', 'Vérifiez votre connexion et réessayez.');
+      return;
+    }
+    await reload();
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60);
   }
 
@@ -106,7 +113,13 @@ export default function Chat() {
             style={s.input}
             multiline
           />
-          <Pressable style={[s.sendBtn, !input.trim() && { opacity: 0.5 }]} disabled={!input.trim() || sending} onPress={send}>
+          <Pressable
+            style={[s.sendBtn, !input.trim() && { opacity: 0.5 }]}
+            disabled={!input.trim() || sending}
+            onPress={send}
+            accessibilityRole="button"
+            accessibilityLabel="Envoyer le message"
+          >
             <Send size={18} color="#fff" />
           </Pressable>
         </View>

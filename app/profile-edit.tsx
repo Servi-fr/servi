@@ -57,6 +57,10 @@ export default function ProfileEdit() {
   }
 
   async function save() {
+    if (!firstName.trim()) {
+      Alert.alert('Prénom requis', 'Renseignez au moins votre prénom avant d\'enregistrer.');
+      return;
+    }
     setSaving(true);
     const name = [firstName, lastName].filter(Boolean).join(' ').trim() || undefined;
     const r = await updateMyProfile({ firstName, lastName, phone, address, name, image });
@@ -79,7 +83,7 @@ export default function ProfileEdit() {
         ) : (
           <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             <View style={s.avatarWrap}>
-              <Pressable onPress={pickPhoto} style={s.avatarBtn}>
+              <Pressable onPress={pickPhoto} style={s.avatarBtn} accessibilityRole="button" accessibilityLabel="Changer la photo de profil">
                 {image ? (
                   <Image source={{ uri: image }} style={s.avatarImg} />
                 ) : (
@@ -99,7 +103,7 @@ export default function ProfileEdit() {
               <Text style={s.avatarHint}>Changer la photo</Text>
             </View>
 
-            <Field label="Prénom" value={firstName} onChange={setFirstName} placeholder="Julien" />
+            <Field label="Prénom *" value={firstName} onChange={setFirstName} placeholder="Julien" />
             <Field label="Nom" value={lastName} onChange={setLastName} placeholder="Marchal" />
             <Field label="Téléphone" value={phone} onChange={setPhone} placeholder="06 12 34 56 78" keyboardType="phone-pad" />
             <Field label="Adresse" value={address} onChange={setAddress} placeholder="12 rue de la République, Paris" />

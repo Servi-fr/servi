@@ -20,7 +20,7 @@ export function NotifBell({ dark = false }: { dark?: boolean }) {
   );
 
   return (
-    <Pressable onPress={() => router.push('/notifications')} hitSlop={8} style={s.wrap}>
+    <Pressable onPress={() => router.push('/notifications')} hitSlop={8} style={s.wrap} accessibilityLabel="Notifications" accessibilityRole="button">
       <Bell size={22} color={dark ? '#fff' : colors.ink} />
       {count > 0 && (
         <View style={s.badge}>
