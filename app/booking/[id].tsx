@@ -113,6 +113,7 @@ export default function BookingDetail() {
       type,
       number: rec.number,
       date: formatDate(b.date),
+      issueDateISO: b.date,
       prestataireName: prof?.name ?? 'Prestataire',
       prestataireSiret: prov?.siret ?? null,
       clientName,
@@ -120,8 +121,13 @@ export default function BookingDetail() {
       total,
     });
     setBusy(false);
-    if (!r.ok) Alert.alert('Document', "La génération du PDF a échoué.");
-    else Alert.alert('Document', `${type === 'facture' ? 'Facture' : 'Devis'} ${rec.number} généré ✓`);
+    if (!r.ok) {
+      Alert.alert('Document', "La génération du PDF a échoué.");
+    } else if (type === 'facture') {
+      Alert.alert('Facture', `Facture ${rec.number} générée ✓${r.facturx ? '\n\nFormat Factur-X inclus (facture électronique EN 16931).' : ''}`);
+    } else {
+      Alert.alert('Devis', `Devis ${rec.number} généré ✓`);
+    }
   }
 
   async function addAgenda() {

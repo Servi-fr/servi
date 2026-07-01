@@ -1,16 +1,48 @@
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system/legacy';
+import { PDFDocument, AFRelationship, PDFName } from 'pdf-lib';
+import { buildFacturXXml, buildFacturXmp, utf8Bytes } from './facturx';
 
 export type DocData = {
   type: 'devis' | 'facture';
   number: string;
   date: string;
+  issueDateISO?: string; // date ISO réelle → date d'émission Factur-X (format 102)
   prestataireName: string;
   prestataireSiret?: string | null;
   clientName: string;
   service: string;
   total: number;
 };
+
+// Embarque le XML Factur-X (EN 16931) dans le PDF de la facture → PDF hybride
+// (visuel + données structurées). Renvoie l'URI du nouveau fichier. Peut throw
+// (l'appelant retombe alors sur le PDF visuel seul).
+async function embedFacturX(pdfUri: string, d: DocData): Promise<string> {
+  const base64 = await FileSystem.readAsStringAsync(pdfUri, { encoding: FileSystem.EncodingType.Base64 });
+  const pdfDoc = await PDFDocument.load(base64);
+
+  // 1) XML CII attaché sous le nom normalisé « factur-x.xml », relation « Data ».
+  await pdfDoc.attach(utf8Bytes(buildFacturXXml(d)), 'factur-x.xml', {
+    mimeType: 'text/xml',
+    description: 'Factur-X',
+    afRelationship: AFRelationship.Data,
+  });
+
+  // 2) Métadonnées XMP Factur-X (reconnaissance par les lecteurs) — best-effort.
+  try {
+    const stream = pdfDoc.context.stream(buildFacturXmp(), { Type: 'Metadata', Subtype: 'XML' });
+    pdfDoc.catalog.set(PDFName.of('Metadata'), pdfDoc.context.register(stream));
+  } catch {
+    /* XMP best-effort : l'attachement XML reste valable sans lui */
+  }
+
+  const outB64 = await pdfDoc.saveAsBase64();
+  const outUri = `${FileSystem.cacheDirectory}${d.number.replace(/[^\w-]/g, '')}-facturx.pdf`;
+  await FileSystem.writeAsStringAsync(outUri, outB64, { encoding: FileSystem.EncodingType.Base64 });
+  return outUri;
+}
 
 function buildHtml(d: DocData): string {
   const title = d.type === 'facture' ? 'FACTURE' : 'DEVIS';
@@ -44,16 +76,27 @@ function buildHtml(d: DocData): string {
   </body></html>`;
 }
 
-export async function generateBillingPdf(d: DocData): Promise<{ ok: boolean; error?: string }> {
+export async function generateBillingPdf(d: DocData): Promise<{ ok: boolean; error?: string; facturx?: boolean }> {
   try {
     const { uri } = await Print.printToFileAsync({ html: buildHtml(d) });
+    let shareUri = uri;
+    let facturx = false;
+    // Factur-X : uniquement pour les FACTURES (les devis ne sont pas concernés).
+    if (d.type === 'facture') {
+      try {
+        shareUri = await embedFacturX(uri, d);
+        facturx = true;
+      } catch {
+        shareUri = uri; // repli : PDF visuel seul (jamais de crash)
+      }
+    }
     if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(uri, {
+      await Sharing.shareAsync(shareUri, {
         mimeType: 'application/pdf',
         dialogTitle: `${d.type === 'facture' ? 'Facture' : 'Devis'} ${d.number}`,
       });
     }
-    return { ok: true };
+    return { ok: true, facturx };
   } catch (e: any) {
     return { ok: false, error: e?.message ?? 'unknown' };
   }
