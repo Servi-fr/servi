@@ -12,6 +12,7 @@ import {
   LogOut,
   ChevronRight,
   FileText,
+  Crown,
   type LucideIcon,
 } from 'lucide-react-native';
 import { supabase } from '../../lib/supabase';
@@ -43,6 +44,7 @@ export default function ProProfile() {
   }
 
   const menu: { label: string; Icon: LucideIcon; route?: string }[] = [
+    { label: 'Passer SERVI Pro', Icon: Crown, route: '/premium' },
     { label: 'Mes prestations & tarifs', Icon: Wallet, route: '/devenir-prestataire' },
     { label: 'Mon profil', Icon: Settings, route: '/profile-edit' },
     { label: 'Paiements & virements', Icon: CreditCard },
