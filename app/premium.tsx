@@ -7,6 +7,7 @@ import { colors, font } from '../theme/colors';
 import { getMyProfile } from '../lib/api';
 import { config } from '../lib/config';
 import { startSubscription } from '../lib/payments';
+import { IS_PRO } from '../lib/variant';
 import { useBreakpoint, centeredContent } from '../lib/responsive';
 
 const PRO_PERKS = [
@@ -27,22 +28,19 @@ const PREMIUM_PERKS = [
 
 export default function Premium() {
   const { contentMaxWidth } = useBreakpoint();
-  const [role, setRole] = useState<string | null>(null);
   const [plan, setPlan] = useState<string>('FREE');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     getMyProfile().then((p) => {
-      if (p) {
-        setRole(p.role);
-        setPlan(p.plan ?? 'FREE');
-      }
+      if (p) setPlan(p.plan ?? 'FREE');
       setLoading(false);
     });
   }, []);
 
-  const isPro = role === 'PRESTATAIRE';
+  // L'offre dépend de l'APP (variant), pas du rôle : SERVI → Premium, SERVI Pro → Pro.
+  const isPro = IS_PRO;
   const targetPlan: 'PRO' | 'PREMIUM' = isPro ? 'PRO' : 'PREMIUM';
   const title = isPro ? 'SERVI Pro' : 'SERVI Premium';
   const price = isPro ? '19,99 €' : '9,99 €';
