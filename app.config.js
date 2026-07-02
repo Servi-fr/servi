@@ -12,7 +12,7 @@ module.exports = ({ config }) => {
     ios: { ...config.ios, bundleIdentifier: 'com.whalesrecords.serviapp.pro' },
     android: {
       ...config.android,
-      package: 'com.whalesrecords.serviapp.pro',
+      package: 'com.servi.app.pro', // Android : identifiant propre com.servi.app (iOS reste whalesrecords)
       adaptiveIcon: {
         ...(config.android && config.android.adaptiveIcon),
         backgroundColor: '#000000',
