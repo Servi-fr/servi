@@ -272,7 +272,7 @@ export type BookingRow = {
   notes?: string | null;
   clientId: string;
   prestataireId: string;
-  client?: { name: string | null } | null;
+  client?: { name: string | null; email?: string | null; phone?: string | null; address?: string | null } | null;
   prestataire?: { name: string | null } | null;
 };
 
@@ -356,7 +356,7 @@ export async function getBookingById(id: string): Promise<BookingRow | null> {
     const { data } = await supabase
       .from('Booking')
       .select(
-        'id,service,date,duration,price,commission,status,address,notes,clientId,prestataireId,prestataire:User!Booking_prestataireId_fkey(name),client:User!Booking_clientId_fkey(name)',
+        'id,service,date,duration,price,commission,status,address,notes,clientId,prestataireId,prestataire:User!Booking_prestataireId_fkey(name),client:User!Booking_clientId_fkey(name,email,phone,address)',
       )
       .eq('id', id)
       .maybeSingle();
