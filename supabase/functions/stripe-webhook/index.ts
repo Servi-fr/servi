@@ -23,14 +23,42 @@ Deno.serve(async (req) => {
     return new Response(`Webhook error: ${(e as Error).message}`, { status: 400 });
   }
 
+  const now = new Date().toISOString();
+
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session;
+
+    // Cas 1 — paiement d'une réservation.
     const bookingId = session.metadata?.bookingId;
     if (bookingId) {
-      await admin
-        .from('Booking')
-        .update({ paymentStatus: 'SUCCEEDED', updatedAt: new Date().toISOString() })
-        .eq('id', bookingId);
+      await admin.from('Booking').update({ paymentStatus: 'SUCCEEDED', updatedAt: now }).eq('id', bookingId);
+    }
+
+    // Cas 2 — abonnement (Premium / Pro) : on active le plan sur le compte.
+    const userId = session.metadata?.userId;
+    const plan = session.metadata?.plan;
+    if (session.mode === 'subscription' && userId && plan) {
+      const subId = (session.subscription as string) ?? crypto.randomUUID();
+      await admin.from('User').update({ plan }).eq('id', userId);
+      await admin.from('Subscription').upsert({
+        id: subId,
+        userId,
+        plan,
+        status: 'active',
+        stripeSubId: (session.subscription as string) ?? null,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+  }
+
+  // Résiliation d'abonnement → retour au plan gratuit.
+  if (event.type === 'customer.subscription.deleted') {
+    const sub = event.data.object as Stripe.Subscription;
+    const { data } = await admin.from('Subscription').select('userId').eq('stripeSubId', sub.id).maybeSingle();
+    if (data?.userId) {
+      await admin.from('User').update({ plan: 'FREE' }).eq('id', data.userId);
+      await admin.from('Subscription').update({ status: 'canceled', updatedAt: now }).eq('stripeSubId', sub.id);
     }
   }
 

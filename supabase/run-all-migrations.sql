@@ -254,6 +254,8 @@ alter table public."Booking" add column if not exists address text;
 alter table public."Booking" add column if not exists notes   text;
 -- Relances auto (B2) : horodatage de la dernière relance envoyée (anti-spam).
 alter table public."Booking" add column if not exists "lastRelancedAt" timestamptz;
+-- Paiement Stripe : statut du paiement de la réservation (mis à jour par le webhook Stripe).
+alter table public."Booking" add column if not exists "paymentStatus" text;
 
 -- ▼▼▼ membership.sql ▼▼▼
 -- ============================================================
