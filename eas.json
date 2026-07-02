@@ -16,7 +16,8 @@
     "preview": {
       "distribution": "internal",
       "android": { "buildType": "apk" },
-      "ios": { "image": "latest" }
+      "ios": { "image": "latest" },
+      "env": { "EXPO_PUBLIC_PAYMENTS_ENABLED": "true" }
     },
     "preview-pro": {
       "extends": "preview",
@@ -24,7 +25,8 @@
     },
     "production": {
       "autoIncrement": true,
-      "ios": { "image": "latest" }
+      "ios": { "image": "latest" },
+      "env": { "EXPO_PUBLIC_PAYMENTS_ENABLED": "true" }
     },
     "production-pro": {
       "extends": "production",
