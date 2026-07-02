@@ -33,6 +33,14 @@ export function isSapEligible(slug: string | undefined): boolean {
   return !!categories.find((c) => c.slug === slug)?.sapEligible;
 }
 
+// Commission SERVI : prélevée sur le PRESTATAIRE (le client ne paie AUCUN frais de service).
+// Réduite pour les prestataires abonnés SERVI Pro → argument de l'abonnement.
+export const SERVI_COMMISSION_FREE = 0.15; // 15 % pour un prestataire gratuit
+export const SERVI_COMMISSION_PRO = 0.1; // 10 % pour un prestataire SERVI Pro
+export function commissionRate(plan?: string | null): number {
+  return plan === 'PRO' ? SERVI_COMMISSION_PRO : SERVI_COMMISSION_FREE;
+}
+
 export const categories: Category[] = [
   { slug: 'menage', name: 'Ménage', desc: 'Entretien, grand nettoyage, repassage', Icon: Sparkles, price: 25, count: 480, sapEligible: true },
   { slug: 'jardinage', name: 'Jardinage', desc: 'Tonte, taille, plantation', Icon: Sprout, price: 30, count: 320, sapEligible: true, sapCap: 5000 },

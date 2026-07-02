@@ -5,7 +5,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { TrendingUp, Star, CheckCircle2, Clock, ChevronRight, ArrowUpRight, Megaphone, FileText, Rocket } from 'lucide-react-native';
 import { colors, font } from '../../theme/colors';
 import { NotifBell } from '../../components/NotifBell';
-import { initials } from '../../lib/data';
+import { initials, commissionRate } from '../../lib/data';
 import { getProBookings, getMyProfile, getMyProviderProfile, boostMyListing, isMyListingSponsored, type BookingRow } from '../../lib/api';
 
 function isToday(iso: string) {
@@ -24,12 +24,17 @@ export default function ProDashboard() {
   const [name, setName] = useState('Prestataire');
   const [isSpon, setIsSpon] = useState(false);
   const [hasProfile, setHasProfile] = useState<boolean | null>(null);
+  const [plan, setPlan] = useState<string>('FREE');
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
       getProBookings().then((b) => active && setBookings(b));
-      getMyProfile().then((p) => active && p?.name && setName(p.name));
+      getMyProfile().then((p) => {
+        if (!active || !p) return;
+        if (p.name) setName(p.name);
+        if (p.plan) setPlan(p.plan);
+      });
       isMyListingSponsored().then((v) => active && setIsSpon(v));
       getMyProviderProfile().then((p) => active && setHasProfile(!!p));
       return () => {
@@ -41,7 +46,8 @@ export default function ProDashboard() {
   const bk = bookings ?? [];
   const pendingCount = bk.filter((b) => b.status === 'PENDING').length;
   const missions = bk.length;
-  const revenue = bk.filter((b) => b.status === 'COMPLETED').reduce((s, b) => s + b.price, 0);
+  const rate = commissionRate(plan);
+  const revenue = Math.round(bk.filter((b) => b.status === 'COMPLETED').reduce((s, b) => s + b.price * (1 - rate), 0));
   const today: { time: string; client: string; service: string }[] = bk
     .filter((b) => b.status !== 'CANCELLED' && isToday(b.date))
     .map((b) => ({ time: hhmm(b.date), client: b.client?.name ?? 'Client', service: b.service }));
@@ -76,7 +82,7 @@ export default function ProDashboard() {
         )}
 
         <View style={s.hero}>
-          <Text style={s.heroLabel}>Revenus (prestations terminées)</Text>
+          <Text style={s.heroLabel}>Revenus nets · commission {Math.round(rate * 100)} %</Text>
           <Text style={s.heroValue}>{revenue.toLocaleString('fr-FR')} €</Text>
           <View style={s.heroTrend}>
             <ArrowUpRight size={15} color="#7ee2a8" />

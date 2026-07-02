@@ -24,7 +24,6 @@ import { searchAddresses, distanceToZoneKm, type AddressSuggestion } from '../..
 
 const WD = ['Dim.', 'Lun.', 'Mar.', 'Mer.', 'Jeu.', 'Ven.', 'Sam.'];
 const SLOTS = ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00'];
-const FEE_RATE = 0.1; // frais de service SERVI
 
 export default function ReservationScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -114,8 +113,7 @@ export default function ReservationScreen() {
   }
 
   const svc = p.services[serviceIdx];
-  const fee = Math.round(svc.price * FEE_RATE);
-  const total = svc.price + fee;
+  const total = svc.price; // client : AUCUN frais de service (commission prélevée côté prestataire)
   const sapCredit = isSapEligible(p.category) ? Math.round(total * SAP_CREDIT_RATE) : 0;
   const ready = slot !== null && selected !== null;
   const chosenDay = days[dayIdx];
@@ -147,7 +145,7 @@ export default function ReservationScreen() {
       dateISO: d.toISOString(),
       durationMin: 60,
       price: svc.price,
-      commission: fee,
+      commission: 0,
       address: selected?.label ?? address.trim(),
       notes: notes.trim() || undefined,
     });
@@ -417,7 +415,6 @@ export default function ReservationScreen() {
           {/* Récap */}
           <View style={s.summary}>
             <Row label={svc.label} value={`${svc.price} €`} />
-            <Row label="Frais de service SERVI" value={`${fee} €`} />
             <View style={s.summaryDivider} />
             <Row label="Total" value={`${total} €`} bold />
             {sapCredit > 0 && (

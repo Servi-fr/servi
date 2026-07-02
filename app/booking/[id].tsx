@@ -75,7 +75,7 @@ export default function BookingDetail() {
   const amClient = b.clientId === uid;
   const amPro = b.prestataireId === uid;
   const otherName = amClient ? b.prestataire?.name : b.client?.name;
-  const total = b.price + b.commission;
+  const total = b.price;
 
   async function setStatus(status: BookingStatus) {
     if (!b) return;
@@ -101,7 +101,7 @@ export default function BookingDetail() {
     if (!b) return;
     setBusy(true);
     const [prof, prov] = await Promise.all([getMyProfile(), getMyProviderProfile()]);
-    const total = b.price + b.commission;
+    const total = b.price;
     const clientName = b.client?.name ?? otherName ?? 'Client';
     const rec = await createBillingDoc({ type, bookingId: b.id, clientName, service: b.service, total });
     if (!rec.ok || !rec.number) {

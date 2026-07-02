@@ -35,7 +35,7 @@ export default function ProDemandes() {
             service: b.service,
             datetime: formatDate(b.date),
             city: b.address ?? '',
-            price: b.price + b.commission,
+            price: b.price,
             live: true,
           })),
         );

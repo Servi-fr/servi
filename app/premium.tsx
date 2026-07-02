@@ -11,12 +11,12 @@ import { IS_PRO } from '../lib/variant';
 import { useBreakpoint, centeredContent } from '../lib/responsive';
 
 const PRO_PERKS = [
-  'Devis & factures conformes (PDF)',
+  'Commission réduite : 10 % au lieu de 15 %',
+  'Devis & factures conformes (PDF / Factur-X)',
   'Comptabilité : encaissements & export FEC',
   'Mise en avant dans les résultats & la carte',
   'Photos illimitées sur votre fiche',
   'Statistiques avancées',
-  'Commission réduite',
 ];
 const PREMIUM_PERKS = [
   'Navigation sans publicité',
