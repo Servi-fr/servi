@@ -3,10 +3,12 @@ import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import { PDFDocument, AFRelationship, PDFName } from 'pdf-lib';
 import { buildFacturXXml, buildFacturXmp, utf8Bytes } from './facturx';
+import { supabase } from './supabase';
 
 export type DocData = {
   type: 'devis' | 'facture';
   number: string;
+  bookingId?: string; // si fourni → génération SERVEUR (PDF/A-3, sans filigrane), repli local sinon
   date: string;
   issueDateISO?: string; // date ISO réelle → date d'émission Factur-X (format 102)
   prestataireName: string;
@@ -104,7 +106,40 @@ function buildHtml(d: DocData): string {
   </body></html>`;
 }
 
-export async function generateBillingPdf(d: DocData): Promise<{ ok: boolean; error?: string; facturx?: boolean }> {
+// Génération SERVEUR : Edge Function generate-invoice → PDF/A-3 + Factur-X EN 16931,
+// polices embarquées, sans filigrane (document définitif au sens actuel). Peut throw.
+async function generateOnServer(d: DocData): Promise<{ uri: string; facturx: boolean }> {
+  const { data, error } = await supabase.functions.invoke('generate-invoice', {
+    body: { bookingId: d.bookingId, type: d.type, number: d.number },
+  });
+  if (error || !data?.ok || !data?.pdfBase64) throw new Error(error?.message ?? data?.error ?? 'server-generation-failed');
+  const uri = `${FileSystem.cacheDirectory}${d.number.replace(/[^\w-]/g, '')}-pdfa3.pdf`;
+  await FileSystem.writeAsStringAsync(uri, data.pdfBase64 as string, { encoding: FileSystem.EncodingType.Base64 });
+  return { uri, facturx: !!data.facturx };
+}
+
+export async function generateBillingPdf(
+  d: DocData,
+): Promise<{ ok: boolean; error?: string; facturx?: boolean; pdfa?: boolean }> {
+  // 1) Voie serveur (PDF/A-3 propre) quand on a le bookingId.
+  if (d.bookingId) {
+    try {
+      const r = await generateOnServer(d);
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(r.uri, {
+          mimeType: 'application/pdf',
+          dialogTitle: `${d.type === 'facture' ? 'Facture' : 'Devis'} ${d.number}`,
+        });
+      }
+      return { ok: true, facturx: r.facturx, pdfa: true };
+    } catch {
+      /* repli sur la génération locale (filigranée « provisoire ») */
+    }
+  }
+  return generateLocally(d);
+}
+
+async function generateLocally(d: DocData): Promise<{ ok: boolean; error?: string; facturx?: boolean; pdfa?: boolean }> {
   try {
     const { uri } = await Print.printToFileAsync({ html: buildHtml(d) });
     let shareUri = uri;

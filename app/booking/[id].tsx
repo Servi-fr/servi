@@ -112,6 +112,7 @@ export default function BookingDetail() {
     const r = await generateBillingPdf({
       type,
       number: rec.number,
+      bookingId: b.id, // → génération serveur PDF/A-3 (repli local si indisponible)
       date: formatDate(b.date),
       issueDateISO: b.date,
       prestataireName: prof?.name ?? 'Prestataire',
@@ -131,9 +132,14 @@ export default function BookingDetail() {
     if (!r.ok) {
       Alert.alert('Document', "La génération du PDF a échoué.");
     } else if (type === 'facture') {
-      Alert.alert('Facture', `Facture ${rec.number} générée ✓${r.facturx ? '\n\nFormat Factur-X inclus (facture électronique EN 16931).' : ''}`);
+      const detail = r.pdfa
+        ? '\n\nPDF/A-3 + Factur-X (EN 16931) — généré par le serveur SERVI.'
+        : r.facturx
+          ? '\n\nFormat Factur-X inclus (version provisoire générée sur l\'appareil).'
+          : '';
+      Alert.alert('Facture', `Facture ${rec.number} générée ✓${detail}`);
     } else {
-      Alert.alert('Devis', `Devis ${rec.number} généré ✓`);
+      Alert.alert('Devis', `Devis ${rec.number} généré ✓${r.pdfa ? '\n\nPDF/A-3 — généré par le serveur SERVI.' : ''}`);
     }
   }
 
