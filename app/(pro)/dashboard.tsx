@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { TrendingUp, Star, CheckCircle2, Clock, ChevronRight, ArrowUpRight, Megaphone, FileText, Rocket } from 'lucide-react-native';
+import { TrendingUp, Star, CheckCircle2, Clock, ChevronRight, ArrowUpRight, Megaphone, FileText, Rocket, Navigation } from 'lucide-react-native';
 import { colors, font } from '../../theme/colors';
 import { NotifBell } from '../../components/NotifBell';
 import { initials, commissionRate } from '../../lib/data';
@@ -48,6 +48,19 @@ export default function ProDashboard() {
   const missions = bk.length;
   const rate = commissionRate(plan);
   const revenue = Math.round(bk.filter((b) => b.status === 'COMPLETED').reduce((s, b) => s + b.price * (1 - rate), 0));
+
+  // Mission active : en cours d'exécution (phase posée), sinon la prochaine confirmée du jour.
+  const activeMission =
+    bk.find((x) => x.status === 'CONFIRMED' && !!x.phase) ??
+    bk.find((x) => x.status === 'CONFIRMED' && isToday(x.date));
+  const PHASE_LABEL: Record<string, string> = {
+    EN_ROUTE: 'En route 🚗',
+    ARRIVED: 'Arrivé sur place 📍',
+    IN_PROGRESS: 'Travaux en cours 🔧',
+  };
+  const missionLabel = activeMission
+    ? PHASE_LABEL[activeMission.phase ?? ''] ?? `Aujourd'hui à ${hhmm(activeMission.date)} — à démarrer`
+    : '';
   const today: { time: string; client: string; service: string }[] = bk
     .filter((b) => b.status !== 'CANCELLED' && isToday(b.date))
     .map((b) => ({ time: hhmm(b.date), client: b.client?.name ?? 'Client', service: b.service }));
@@ -76,6 +89,22 @@ export default function ProDashboard() {
             <View style={{ flex: 1 }}>
               <Text style={s.setupTitle}>Activez votre activité</Text>
               <Text style={s.setupSub}>Créez votre fiche prestataire pour recevoir des demandes.</Text>
+            </View>
+            <ChevronRight size={20} color="#fff" />
+          </Pressable>
+        )}
+
+        {/* Widget mission : accès en 1 tap au suivi (en route / arrivé / travaux / fin) */}
+        {activeMission && (
+          <Pressable style={s.mission1} onPress={() => router.push(`/booking/${activeMission.id}`)}>
+            <View style={s.mission1Icon}>
+              <Navigation size={20} color="#fff" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.mission1Title}>
+                {activeMission.service} · {activeMission.client?.name ?? 'Client'}
+              </Text>
+              <Text style={s.mission1Sub}>{missionLabel}</Text>
             </View>
             <ChevronRight size={20} color="#fff" />
           </Pressable>
@@ -187,6 +216,10 @@ const s = StyleSheet.create({
   name: { fontFamily: font.display, fontSize: 24, color: colors.proInk, letterSpacing: -0.5, marginTop: 2 },
   avatar: { width: 48, height: 48, borderRadius: 15, backgroundColor: colors.proInk, alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontFamily: font.display, fontSize: 16, color: '#fff' },
+  mission1: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.proInk, borderRadius: 18, padding: 16, marginBottom: 14 },
+  mission1Icon: { width: 40, height: 40, borderRadius: 13, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' },
+  mission1Title: { fontFamily: font.semi, fontSize: 15, color: '#fff' },
+  mission1Sub: { fontFamily: font.body, fontSize: 12.5, color: '#aeb6c6', marginTop: 2 },
   setup: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.proInk, borderRadius: 18, padding: 16, marginBottom: 14 },
   setupIcon: { width: 40, height: 40, borderRadius: 13, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' },
   setupTitle: { fontFamily: font.semi, fontSize: 15.5, color: '#fff' },

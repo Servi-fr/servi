@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput, StyleSheet, ActivityIndicator, Alert, Modal, Image } from 'react-native';
+import { View, Text, ScrollView, Pressable, TextInput, StyleSheet, ActivityIndicator, Alert, Modal, Image, Linking, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { CalendarDays, CalendarPlus, User, Check, X, MessageCircle, Star, Briefcase, MapPin, FileText, Truck, Hammer, ImagePlus } from 'lucide-react-native';
+import { CalendarDays, CalendarPlus, User, Check, X, MessageCircle, Star, Briefcase, MapPin, FileText, Truck, Hammer, ImagePlus, Navigation, Flag } from 'lucide-react-native';
 import { addToCalendar } from '../../lib/calendar';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { StatusBadge } from '../../components/StatusBadge';
@@ -187,18 +187,46 @@ export default function BookingDetail() {
     setReviewSent(true);
   }
 
-  // Avancement de mission (prestataire) : en route → en cours.
+  // Ouvre le GPS du téléphone avec l'itinéraire vers le lieu d'intervention.
+  function openGps() {
+    const addr = b?.address;
+    if (!addr) {
+      Alert.alert('GPS', "Aucune adresse d'intervention n'est renseignée sur cette réservation.");
+      return;
+    }
+    const dest = encodeURIComponent(addr);
+    const url = Platform.OS === 'ios' ? `http://maps.apple.com/?daddr=${dest}&dirflg=d` : `google.navigation:q=${dest}`;
+    Linking.openURL(url).catch(() => {
+      Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${dest}`).catch(() => {
+        Alert.alert('GPS', "Impossible d'ouvrir l'application de navigation.");
+      });
+    });
+  }
+
+  // Avancement de mission (prestataire) : en route → arrivé → travaux en cours.
   // Le trigger en base journalise l'événement et prévient le client (notif + push).
-  async function advancePhase(phase: 'EN_ROUTE' | 'IN_PROGRESS') {
+  async function advancePhase(phase: 'EN_ROUTE' | 'ARRIVED' | 'IN_PROGRESS') {
     if (!b) return;
     setBusy(true);
     const r = await setBookingPhase(b.id, phase);
     setBusy(false);
     if (!r.ok) {
-      Alert.alert('Action impossible', "Le statut n'a pas pu être mis à jour. Réessayez.");
+      Alert.alert(
+        'Action impossible',
+        r.error === 'session-expiree'
+          ? 'Votre session a expiré : déconnectez-vous puis reconnectez-vous, et réessayez.'
+          : `Le statut n'a pas pu être mis à jour.\n\n(${r.error ?? 'erreur inconnue'})`,
+      );
       return;
     }
     await load();
+    // En route + adresse connue → on propose de lancer la navigation.
+    if (phase === 'EN_ROUTE' && b.address) {
+      Alert.alert('En route 🚗', 'Le client a été prévenu. Lancer le GPS vers le lieu d\'intervention ?', [
+        { text: 'Plus tard', style: 'cancel' },
+        { text: 'Lancer le GPS', onPress: openGps },
+      ]);
+    }
   }
 
   async function addProofPhoto() {
@@ -223,7 +251,12 @@ export default function BookingDetail() {
       const r = await completeBookingWithProof({ id: b.id, photos: proofPhotos, signature });
       setBusy(false);
       if (!r.ok) {
-        Alert.alert('Fin de mission', "La clôture a échoué. Réessayez.");
+        Alert.alert(
+          'Fin de mission',
+          r.error === 'session-expiree'
+            ? 'Votre session a expiré : déconnectez-vous puis reconnectez-vous, et réessayez.'
+            : `La clôture a échoué.\n\n(${r.error ?? 'erreur inconnue'})`,
+        );
         return;
       }
       setFinishOpen(false);
@@ -341,9 +374,21 @@ export default function BookingDetail() {
           </>
         )}
         {amPro && b.status === 'CONFIRMED' && b.phase === 'EN_ROUTE' && (
+          <>
+            <Pressable style={s.secondary} onPress={openGps}>
+              <Navigation size={18} color={colors.link} />
+              <Text style={s.secondaryText}>Lancer le GPS</Text>
+            </Pressable>
+            <Pressable style={s.btnDarkFull} disabled={busy} onPress={() => advancePhase('ARRIVED')}>
+              <Flag size={17} color="#fff" />
+              <Text style={s.btnDarkText}>Je suis arrivé</Text>
+            </Pressable>
+          </>
+        )}
+        {amPro && b.status === 'CONFIRMED' && b.phase === 'ARRIVED' && (
           <Pressable style={s.btnDarkFull} disabled={busy} onPress={() => advancePhase('IN_PROGRESS')}>
             <Hammer size={17} color="#fff" />
-            <Text style={s.btnDarkText}>Commencer la prestation</Text>
+            <Text style={s.btnDarkText}>Commencer les travaux</Text>
           </Pressable>
         )}
         {amPro && b.status === 'CONFIRMED' && b.phase === 'IN_PROGRESS' && (

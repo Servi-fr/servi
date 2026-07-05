@@ -77,16 +77,23 @@ begin
   exception when others then null;
   end;
 
-  -- Événements de phase (trajet / travail) + notification au client
+  -- Événements de phase (trajet / arrivée / travail) + notification au client
   begin
     if new.phase is distinct from old.phase and new.phase is not null then
       insert into public."BookingEvent" ("bookingId", type)
-      values (new.id, case new.phase when 'EN_ROUTE' then 'EN_ROUTE' when 'IN_PROGRESS' then 'STARTED' else new.phase end);
+      values (new.id, case new.phase
+        when 'EN_ROUTE' then 'EN_ROUTE'
+        when 'ARRIVED' then 'ARRIVED'
+        when 'IN_PROGRESS' then 'STARTED'
+        else new.phase end);
 
       select coalesce(name, 'Votre prestataire') into pro_name from public."User" where id = new."prestataireId";
       insert into public."Notification" (id, "userId", type, title, message, read, link, "createdAt", "updatedAt")
       values (gen_random_uuid()::text, new."clientId", 'booking',
-        case new.phase when 'EN_ROUTE' then 'Votre prestataire est en route 🚗' else 'La prestation a commencé 🔧' end,
+        case new.phase
+          when 'EN_ROUTE' then 'Votre prestataire est en route 🚗'
+          when 'ARRIVED' then 'Votre prestataire est arrivé 📍'
+          else 'La prestation a commencé 🔧' end,
         pro_name || ' — « ' || new.service || ' »',
         false, '/booking/' || new.id, now(), now());
     end if;

@@ -275,7 +275,7 @@ export type BookingRow = {
   client?: { name: string | null; email?: string | null; phone?: string | null; address?: string | null } | null;
   prestataire?: { name: string | null } | null;
   // Cycle de vie « façon Uber » (colonnes ajoutées par booking-lifecycle.sql — peuvent être absentes)
-  phase?: 'EN_ROUTE' | 'IN_PROGRESS' | null;
+  phase?: 'EN_ROUTE' | 'ARRIVED' | 'IN_PROGRESS' | null;
   proofPhotos?: string[] | null;
   signature?: string | null; // JSON de traits dessinés dans l'app
   signedAt?: string | null;
@@ -349,12 +349,23 @@ export async function getMyBookings(): Promise<BookingRow[]> {
 export async function getProBookings(): Promise<BookingRow[]> {
   const uid = await getUid();
   if (!uid) return [];
+  const BASE =
+    'id,service,date,duration,price,commission,status,address,notes,clientId,prestataireId,client:User!Booking_clientId_fkey(name)';
+  // Résilient : tente avec la phase (cycle de vie), repli sans si la migration n'est pas passée.
   try {
     const { data, error } = await supabase
       .from('Booking')
-      .select(
-        'id,service,date,duration,price,commission,status,address,notes,clientId,prestataireId,client:User!Booking_clientId_fkey(name)',
-      )
+      .select(`${BASE},phase`)
+      .eq('prestataireId', uid)
+      .order('date', { ascending: true });
+    if (!error && data) return data as unknown as BookingRow[];
+  } catch {
+    /* repli ci-dessous */
+  }
+  try {
+    const { data, error } = await supabase
+      .from('Booking')
+      .select(BASE)
       .eq('prestataireId', uid)
       .order('date', { ascending: true });
     if (error || !data) return [];
@@ -403,14 +414,20 @@ export async function getBookingTimeline(bookingId: string): Promise<BookingEven
   }
 }
 
-// Sous-état d'exécution (prestataire) : EN_ROUTE → IN_PROGRESS.
+// Sous-état d'exécution (prestataire) : EN_ROUTE → ARRIVED → IN_PROGRESS.
 // Le trigger en base journalise l'événement et notifie le client.
 export async function setBookingPhase(
   id: string,
-  phase: 'EN_ROUTE' | 'IN_PROGRESS',
+  phase: 'EN_ROUTE' | 'ARRIVED' | 'IN_PROGRESS',
 ): Promise<{ ok: boolean; error?: string }> {
-  const { error } = await supabase.from('Booking').update({ phase, updatedAt: nowISO() }).eq('id', id);
-  return error ? { ok: false, error: error.message } : { ok: true };
+  const { data, error } = await supabase
+    .from('Booking')
+    .update({ phase, updatedAt: nowISO() })
+    .eq('id', id)
+    .select('id');
+  if (error) return { ok: false, error: error.message };
+  if (!data?.length) return { ok: false, error: 'session-expiree' };
+  return { ok: true };
 }
 
 // Fin de mission avec preuves : photos + signature du client (JSON de traits).
@@ -419,7 +436,7 @@ export async function completeBookingWithProof(p: {
   photos: string[];
   signature: string | null;
 }): Promise<{ ok: boolean; error?: string }> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('Booking')
     .update({
       status: 'COMPLETED',
@@ -429,8 +446,11 @@ export async function completeBookingWithProof(p: {
       signedAt: p.signature ? nowISO() : null,
       updatedAt: nowISO(),
     })
-    .eq('id', p.id);
-  return error ? { ok: false, error: error.message } : { ok: true };
+    .eq('id', p.id)
+    .select('id');
+  if (error) return { ok: false, error: error.message };
+  if (!data?.length) return { ok: false, error: 'session-expiree' };
+  return { ok: true };
 }
 
 // Photo de preuve de fin de mission (bucket avatars, dossier de l'utilisateur).
@@ -455,11 +475,15 @@ export async function updateBookingStatus(
   id: string,
   status: BookingStatus,
 ): Promise<{ ok: boolean; error?: string }> {
-  const { error } = await supabase
+  // .select('id') → détecte les updates « silencieux » à 0 ligne (session expirée / RLS).
+  const { data, error } = await supabase
     .from('Booking')
     .update({ status, updatedAt: nowISO() })
-    .eq('id', id);
-  return error ? { ok: false, error: error.message } : { ok: true };
+    .eq('id', id)
+    .select('id');
+  if (error) return { ok: false, error: error.message };
+  if (!data?.length) return { ok: false, error: 'session-expiree' };
+  return { ok: true };
 }
 
 // Le créneau est-il déjà réservé chez ce prestataire ? (fonction SQL SECURITY DEFINER

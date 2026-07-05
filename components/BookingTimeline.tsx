@@ -5,12 +5,13 @@ import type { BookingEventRow, BookingRow } from '../lib/api';
 // Timeline « façon Uber » : demande → acceptée → en route → en cours → terminée.
 // Les horodatages viennent du journal d'événements (BookingEvent) quand il existe.
 
-type StepKey = 'CREATED' | 'ACCEPTED' | 'EN_ROUTE' | 'STARTED' | 'COMPLETED';
+type StepKey = 'CREATED' | 'ACCEPTED' | 'EN_ROUTE' | 'ARRIVED' | 'STARTED' | 'COMPLETED';
 const STEPS: { key: StepKey; label: string }[] = [
   { key: 'CREATED', label: 'Demande envoyée' },
   { key: 'ACCEPTED', label: 'Acceptée par le prestataire' },
   { key: 'EN_ROUTE', label: 'Prestataire en route' },
-  { key: 'STARTED', label: 'Prestation en cours' },
+  { key: 'ARRIVED', label: 'Arrivé sur place' },
+  { key: 'STARTED', label: 'Travaux en cours' },
   { key: 'COMPLETED', label: 'Terminée' },
 ];
 
@@ -33,8 +34,9 @@ export function BookingTimeline({ booking, events }: { booking: BookingRow; even
 
   // Index de progression selon statut + phase.
   const reached =
-    booking.status === 'COMPLETED' ? 4
-    : booking.phase === 'IN_PROGRESS' ? 3
+    booking.status === 'COMPLETED' ? 5
+    : booking.phase === 'IN_PROGRESS' ? 4
+    : booking.phase === 'ARRIVED' ? 3
     : booking.phase === 'EN_ROUTE' ? 2
     : booking.status === 'CONFIRMED' ? 1
     : 0;
