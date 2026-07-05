@@ -6,6 +6,7 @@ import {
   BadgeCheck,
   Star,
   Wallet,
+  Briefcase,
   Settings,
   CreditCard,
   HelpCircle,
@@ -45,7 +46,8 @@ export default function ProProfile() {
 
   const menu: { label: string; Icon: LucideIcon; route?: string }[] = [
     { label: 'Passer SERVI Pro', Icon: Crown, route: '/premium' },
-    { label: 'Mes prestations & tarifs', Icon: Wallet, route: '/devenir-prestataire' },
+    { label: 'Comptabilité du mois', Icon: Wallet, route: '/compta' },
+    { label: 'Mes prestations & tarifs', Icon: Briefcase, route: '/devenir-prestataire' },
     { label: 'Mon profil', Icon: Settings, route: '/profile-edit' },
     { label: 'Paiements & virements', Icon: CreditCard },
     { label: 'Aide & support', Icon: HelpCircle },

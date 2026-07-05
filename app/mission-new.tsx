@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { View, Text, ScrollView, TextInput, Pressable, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { colors, font } from '../theme/colors';
 import { createManualJob } from '../lib/api';
@@ -15,8 +15,9 @@ const DURATIONS = [30, 60, 90, 120, 180, 240];
 
 export default function MissionNew() {
   const router = useRouter();
-  const [clientName, setClientName] = useState('');
-  const [clientPhone, setClientPhone] = useState('');
+  const pre = useLocalSearchParams<{ clientName?: string; clientPhone?: string }>();
+  const [clientName, setClientName] = useState(pre.clientName ?? '');
+  const [clientPhone, setClientPhone] = useState(pre.clientPhone ?? '');
   const [service, setService] = useState('');
   const [dayIdx, setDayIdx] = useState(0);
   const [slot, setSlot] = useState<string | null>(null);

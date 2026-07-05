@@ -422,7 +422,7 @@ export async function getProBookings(): Promise<BookingRow[]> {
   try {
     const { data, error } = await supabase
       .from('Booking')
-      .select(`${BASE},phase`)
+      .select(`${BASE},phase,tipAmount`)
       .eq('prestataireId', uid)
       .order('date', { ascending: true });
     if (!error && data) return data as unknown as BookingRow[];

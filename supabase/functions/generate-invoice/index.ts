@@ -307,12 +307,14 @@ async function buildPdf(d: Doc): Promise<Uint8Array> {
 
 Deno.serve(async (req) => {
   try {
-    const { bookingId, type, number } = await req.json();
-    if (!bookingId || !number || (type !== 'facture' && type !== 'devis')) {
-      return json({ error: 'bookingId, type (facture|devis) et number requis' }, 400);
+    const body = await req.json();
+    const { bookingId, type, number, standalone } = body;
+    if (!number || (type !== 'facture' && type !== 'devis')) {
+      return json({ error: 'type (facture|devis) et number requis' }, 400);
     }
+    if (!bookingId && !standalone) return json({ error: 'bookingId ou standalone requis' }, 400);
 
-    // Authentification : l'appelant doit être le prestataire de la réservation.
+    // Authentification.
     const authHeader = req.headers.get('Authorization') ?? '';
     const asUser = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
       global: { headers: { Authorization: authHeader } },
@@ -320,39 +322,67 @@ Deno.serve(async (req) => {
     const { data: { user } } = await asUser.auth.getUser();
     if (!user) return json({ error: 'not-authenticated' }, 401);
 
-    // Données server-authoritative.
-    const { data: booking } = await admin
-      .from('Booking')
-      .select('id,service,date,price,prestataireId,address,client:User!Booking_clientId_fkey(name,email,phone,address)')
-      .eq('id', bookingId)
-      .maybeSingle();
-    if (!booking) return json({ error: 'booking-not-found' }, 404);
-    if (booking.prestataireId !== user.id) return json({ error: 'forbidden' }, 403);
-
+    // Émetteur : toujours server-authoritative (profil du user connecté).
     const [{ data: seller }, { data: prov }] = await Promise.all([
       admin.from('User').select('name,email,phone,address').eq('id', user.id).maybeSingle(),
       admin.from('PrestataireProfile').select('siret').eq('userId', user.id).maybeSingle(),
     ]);
-
-    const client = (booking as any).client ?? {};
-    const issue = new Date(booking.date);
-    const doc: Doc = {
-      type,
-      number,
-      issueDate: isNaN(issue.getTime()) ? new Date() : issue,
+    const sellerPart = {
       sellerName: seller?.name ?? 'Prestataire',
       sellerSiret: prov?.siret ?? null,
       sellerAddress: seller?.address ?? null,
       sellerEmail: seller?.email ?? null,
       sellerPhone: seller?.phone ?? null,
-      buyerName: client?.name ?? 'Client',
-      buyerAddress: client?.address ?? null,
-      buyerEmail: client?.email ?? null,
-      buyerPhone: client?.phone ?? null,
-      interventionAddress: booking.address ?? null,
-      service: booking.service,
-      total: Number(booking.price),
     };
+
+    let doc: Doc;
+    if (standalone) {
+      // Document LIBRE (client hors SERVI / mission perso) : le contenu vient du
+      // prestataire lui-même (c'est SA facture), bornes de sûreté côté serveur.
+      const total = Number(standalone.total);
+      if (!standalone.clientName || !standalone.service || !Number.isFinite(total) || total <= 0 || total > 100000) {
+        return json({ error: 'standalone invalide (clientName, service, total 0–100000 requis)' }, 400);
+      }
+      const issue = standalone.dateISO ? new Date(standalone.dateISO) : new Date();
+      doc = {
+        type,
+        number,
+        issueDate: isNaN(issue.getTime()) ? new Date() : issue,
+        ...sellerPart,
+        buyerName: String(standalone.clientName),
+        buyerAddress: standalone.clientAddress ?? null,
+        buyerEmail: standalone.clientEmail ?? null,
+        buyerPhone: standalone.clientPhone ?? null,
+        interventionAddress: standalone.interventionAddress ?? null,
+        service: String(standalone.service),
+        total,
+      };
+    } else {
+      // Document lié à une réservation SERVI : données server-authoritative.
+      const { data: booking } = await admin
+        .from('Booking')
+        .select('id,service,date,price,prestataireId,address,client:User!Booking_clientId_fkey(name,email,phone,address)')
+        .eq('id', bookingId)
+        .maybeSingle();
+      if (!booking) return json({ error: 'booking-not-found' }, 404);
+      if (booking.prestataireId !== user.id) return json({ error: 'forbidden' }, 403);
+
+      const client = (booking as any).client ?? {};
+      const issue = new Date(booking.date);
+      doc = {
+        type,
+        number,
+        issueDate: isNaN(issue.getTime()) ? new Date() : issue,
+        ...sellerPart,
+        buyerName: client?.name ?? 'Client',
+        buyerAddress: client?.address ?? null,
+        buyerEmail: client?.email ?? null,
+        buyerPhone: client?.phone ?? null,
+        interventionAddress: booking.address ?? null,
+        service: booking.service,
+        total: Number(booking.price),
+      };
+    }
 
     const pdfBytes = await buildPdf(doc);
     // base64 par blocs (évite un dépassement de pile sur les gros tableaux)

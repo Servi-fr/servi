@@ -1,14 +1,15 @@
 import { useCallback, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from 'expo-router';
-import { FileText } from 'lucide-react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { FileText, Plus } from 'lucide-react-native';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { colors, font } from '../theme/colors';
 import { getMyBillingDocs, formatShortDate, type BillingDocRow } from '../lib/api';
 import { useBreakpoint, centeredContent } from '../lib/responsive';
 
 export default function Facturation() {
+  const router = useRouter();
   const { contentMaxWidth } = useBreakpoint();
   const [docs, setDocs] = useState<BillingDocRow[] | null>(null);
 
@@ -39,11 +40,21 @@ export default function Facturation() {
               <FileText size={26} color={colors.proInk} />
             </View>
             <Text style={s.emptyTitle}>Aucun document</Text>
-            <Text style={s.emptyText}>Vos devis et factures (générés depuis une réservation) apparaîtront ici.</Text>
+            <Text style={s.emptyText}>
+              Créez un devis ou une facture pour n'importe quel client — ou générez-les depuis une réservation.
+            </Text>
+            <Pressable style={s.newBtn} onPress={() => router.push('/facture-new')}>
+              <Plus size={16} color="#fff" />
+              <Text style={s.newBtnText}>Nouveau document</Text>
+            </Pressable>
           </View>
         ) : (
           <>
-            <View style={s.summary}>
+            <Pressable style={s.newBtn} onPress={() => router.push('/facture-new')}>
+              <Plus size={16} color="#fff" />
+              <Text style={s.newBtnText}>Nouveau document (tout client)</Text>
+            </Pressable>
+            <View style={[s.summary, { marginTop: 14 }]}>
               <Text style={s.summaryLabel}>Chiffre d'affaires facturé</Text>
               <Text style={s.summaryValue}>{caTtc.toLocaleString('fr-FR')} €</Text>
               <Text style={s.summarySub}>{factures.length} facture{factures.length > 1 ? 's' : ''}</Text>
@@ -92,6 +103,8 @@ const s = StyleSheet.create({
   number: { fontFamily: font.semi, fontSize: 15, color: colors.ink },
   meta: { fontFamily: font.body, fontSize: 12.5, color: colors.muted, marginTop: 2 },
   total: { fontFamily: font.display, fontSize: 17, color: colors.proInk },
+  newBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, backgroundColor: colors.proInk, borderRadius: 13, paddingVertical: 14, marginTop: 6 },
+  newBtnText: { fontFamily: font.semi, fontSize: 14.5, color: '#fff' },
   empty: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 30 },
   emptyIcon: { width: 56, height: 56, borderRadius: 16, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
   emptyTitle: { fontFamily: font.displaySemi, fontSize: 18, color: colors.ink, marginBottom: 8 },

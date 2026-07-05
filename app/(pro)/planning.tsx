@@ -30,6 +30,8 @@ type Item = {
   service: string;
   address: string;
   done: boolean;
+  price: number;
+  phone?: string | null;
 };
 type Day = { day: string; items: Item[] };
 
@@ -51,6 +53,7 @@ export default function ProPlanning() {
           service: b.service,
           address: b.address ?? '',
           done: b.status === 'COMPLETED',
+          price: b.price,
         })),
       ...jobs
         .filter((j) => j.status !== 'CANCELLED')
@@ -63,6 +66,8 @@ export default function ProPlanning() {
           service: j.service,
           address: j.address ?? '',
           done: j.status === 'DONE',
+          price: j.price,
+          phone: j.clientPhone,
         })),
     ].sort((a, b) => +a.when - +b.when);
 
@@ -87,13 +92,33 @@ export default function ProPlanning() {
     }, []),
   );
 
+  function billingParams(it: Item, docType: 'facture' | 'devis') {
+    return {
+      pathname: '/facture-new' as const,
+      params: {
+        docType,
+        clientName: it.client,
+        clientPhone: it.phone ?? '',
+        service: it.service,
+        price: it.price ? String(it.price) : '',
+      },
+    };
+  }
+
   function onPressItem(it: Item) {
     if (it.kind === 'servi') {
       router.push(`/booking/${it.id}`);
       return;
     }
-    if (it.done) return;
-    // Mission perso : actions rapides.
+    if (it.done) {
+      // Mission perso terminée → facturer en 1 tap (préremplie).
+      Alert.alert(it.service, `${it.client} · terminée`, [
+        { text: 'Fermer', style: 'cancel' },
+        { text: 'Générer la facture', onPress: () => router.push(billingParams(it, 'facture')) },
+      ]);
+      return;
+    }
+    // Mission perso planifiée : actions rapides.
     Alert.alert(it.service, `${it.client} · ${it.time}`, [
       { text: 'Fermer', style: 'cancel' },
       {
@@ -104,6 +129,7 @@ export default function ProPlanning() {
           await load();
         },
       },
+      { text: 'Créer un devis', onPress: () => router.push(billingParams(it, 'devis')) },
       {
         text: 'Annuler la mission',
         style: 'destructive',

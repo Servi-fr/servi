@@ -108,10 +108,25 @@ function buildHtml(d: DocData): string {
 
 // Génération SERVEUR : Edge Function generate-invoice → PDF/A-3 + Factur-X EN 16931,
 // polices embarquées, sans filigrane (document définitif au sens actuel). Peut throw.
+// Deux modes : lié à une réservation SERVI (bookingId), ou LIBRE (n'importe quel client).
 async function generateOnServer(d: DocData): Promise<{ uri: string; facturx: boolean }> {
-  const { data, error } = await supabase.functions.invoke('generate-invoice', {
-    body: { bookingId: d.bookingId, type: d.type, number: d.number },
-  });
+  const body = d.bookingId
+    ? { bookingId: d.bookingId, type: d.type, number: d.number }
+    : {
+        type: d.type,
+        number: d.number,
+        standalone: {
+          clientName: d.clientName,
+          clientEmail: d.clientEmail ?? null,
+          clientPhone: d.clientPhone ?? null,
+          clientAddress: d.clientAddress ?? null,
+          interventionAddress: d.interventionAddress ?? null,
+          service: d.service,
+          total: d.total,
+          dateISO: d.issueDateISO ?? null,
+        },
+      };
+  const { data, error } = await supabase.functions.invoke('generate-invoice', { body });
   if (error || !data?.ok || !data?.pdfBase64) throw new Error(error?.message ?? data?.error ?? 'server-generation-failed');
   const uri = `${FileSystem.cacheDirectory}${d.number.replace(/[^\w-]/g, '')}-pdfa3.pdf`;
   await FileSystem.writeAsStringAsync(uri, data.pdfBase64 as string, { encoding: FileSystem.EncodingType.Base64 });
@@ -121,8 +136,8 @@ async function generateOnServer(d: DocData): Promise<{ uri: string; facturx: boo
 export async function generateBillingPdf(
   d: DocData,
 ): Promise<{ ok: boolean; error?: string; facturx?: boolean; pdfa?: boolean }> {
-  // 1) Voie serveur (PDF/A-3 propre) quand on a le bookingId.
-  if (d.bookingId) {
+  // 1) Voie serveur (PDF/A-3 propre) — réservation SERVI ou document libre.
+  {
     try {
       const r = await generateOnServer(d);
       if (await Sharing.isAvailableAsync()) {
