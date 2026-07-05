@@ -1,16 +1,23 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, Pressable, TextInput, StyleSheet, ActivityIndicator, Alert, Modal, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { CalendarDays, CalendarPlus, User, Check, X, MessageCircle, Star, Briefcase, MapPin, FileText } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { CalendarDays, CalendarPlus, User, Check, X, MessageCircle, Star, Briefcase, MapPin, FileText, Truck, Hammer, ImagePlus } from 'lucide-react-native';
 import { addToCalendar } from '../../lib/calendar';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { StatusBadge } from '../../components/StatusBadge';
+import { BookingTimeline } from '../../components/BookingTimeline';
+import { SignaturePad, SignatureView } from '../../components/SignaturePad';
 import { colors, font } from '../../theme/colors';
 import {
   getBookingById,
+  getBookingTimeline,
   getUid,
   updateBookingStatus,
+  setBookingPhase,
+  completeBookingWithProof,
+  uploadProofPhoto,
   createReview,
   getUserRating,
   createBillingDoc,
@@ -19,6 +26,7 @@ import {
   formatDate,
   type BookingRow,
   type BookingStatus,
+  type BookingEventRow,
 } from '../../lib/api';
 import { generateBillingPdf } from '../../lib/invoice';
 
@@ -36,10 +44,18 @@ export default function BookingDetail() {
   const [reviewSent, setReviewSent] = useState(false);
   const [otherRating, setOtherRating] = useState<{ avg: number; count: number } | null>(null);
 
+  // Timeline + fin de mission (photos + signature)
+  const [events, setEvents] = useState<BookingEventRow[]>([]);
+  const [finishOpen, setFinishOpen] = useState(false);
+  const [proofPhotos, setProofPhotos] = useState<string[]>([]);
+  const [addingPhoto, setAddingPhoto] = useState(false);
+  const [signature, setSignature] = useState<string | null>(null);
+
   async function load() {
-    const [bk, u] = await Promise.all([getBookingById(id), getUid()]);
+    const [bk, u, ev] = await Promise.all([getBookingById(id), getUid(), getBookingTimeline(id)]);
     setB(bk);
     setUid(u);
+    setEvents(ev);
     setLoading(false);
   }
   useEffect(() => {
@@ -171,6 +187,59 @@ export default function BookingDetail() {
     setReviewSent(true);
   }
 
+  // Avancement de mission (prestataire) : en route → en cours.
+  // Le trigger en base journalise l'événement et prévient le client (notif + push).
+  async function advancePhase(phase: 'EN_ROUTE' | 'IN_PROGRESS') {
+    if (!b) return;
+    setBusy(true);
+    const r = await setBookingPhase(b.id, phase);
+    setBusy(false);
+    if (!r.ok) {
+      Alert.alert('Action impossible', "Le statut n'a pas pu être mis à jour. Réessayez.");
+      return;
+    }
+    await load();
+  }
+
+  async function addProofPhoto() {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('Photos', "Autorisez l'accès aux photos pour ajouter une preuve.");
+      return;
+    }
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.6 });
+    if (res.canceled || !res.assets?.[0] || !b) return;
+    setAddingPhoto(true);
+    const up = await uploadProofPhoto(res.assets[0].uri, b.id);
+    setAddingPhoto(false);
+    if (up.ok && up.url) setProofPhotos((cur) => [...cur, up.url!]);
+    else Alert.alert('Photo', "La photo n'a pas pu être envoyée.");
+  }
+
+  async function finishMission() {
+    if (!b || busy) return;
+    const doFinish = async () => {
+      setBusy(true);
+      const r = await completeBookingWithProof({ id: b.id, photos: proofPhotos, signature });
+      setBusy(false);
+      if (!r.ok) {
+        Alert.alert('Fin de mission', "La clôture a échoué. Réessayez.");
+        return;
+      }
+      setFinishOpen(false);
+      Alert.alert('Mission terminée 🎉', 'Le client a été prévenu. Vous pouvez générer la facture depuis cette page.');
+      await load();
+    };
+    if (!signature) {
+      Alert.alert('Sans signature ?', 'Le client n\'a pas signé. Terminer quand même ?', [
+        { text: 'Retour', style: 'cancel' },
+        { text: 'Terminer sans signature', onPress: doFinish },
+      ]);
+      return;
+    }
+    await doFinish();
+  }
+
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       <ScreenHeader title="Réservation" />
@@ -178,6 +247,11 @@ export default function BookingDetail() {
         <View style={s.head}>
           <Text style={s.service}>{b.service}</Text>
           <StatusBadge status={b.status} />
+        </View>
+
+        {/* Suivi de mission (façon Uber) */}
+        <View style={{ marginBottom: 14 }}>
+          <BookingTimeline booking={b} events={events} />
         </View>
 
         <View style={s.card}>
@@ -254,14 +328,28 @@ export default function BookingDetail() {
             </Pressable>
           </View>
         )}
-        {amPro && b.status === 'CONFIRMED' && (
-          <Pressable
-            style={s.btnDarkFull}
-            disabled={busy}
-            onPress={() => confirmStatus('COMPLETED', 'Marquer comme terminée ?', 'Cette action confirme que la prestation a bien eu lieu.', 'Terminer', false)}
-          >
+        {/* Avancement de mission (prestataire) : en route → en cours → fin avec preuves */}
+        {amPro && b.status === 'CONFIRMED' && !b.phase && (
+          <>
+            <Pressable style={s.btnDarkFull} disabled={busy} onPress={() => advancePhase('EN_ROUTE')}>
+              <Truck size={17} color="#fff" />
+              <Text style={s.btnDarkText}>Je suis en route</Text>
+            </Pressable>
+            <Pressable onPress={() => setFinishOpen(true)} hitSlop={8}>
+              <Text style={s.skipLink}>Passer directement à la fin de mission</Text>
+            </Pressable>
+          </>
+        )}
+        {amPro && b.status === 'CONFIRMED' && b.phase === 'EN_ROUTE' && (
+          <Pressable style={s.btnDarkFull} disabled={busy} onPress={() => advancePhase('IN_PROGRESS')}>
+            <Hammer size={17} color="#fff" />
+            <Text style={s.btnDarkText}>Commencer la prestation</Text>
+          </Pressable>
+        )}
+        {amPro && b.status === 'CONFIRMED' && b.phase === 'IN_PROGRESS' && (
+          <Pressable style={s.btnDarkFull} disabled={busy} onPress={() => setFinishOpen(true)}>
             <Check size={17} color="#fff" />
-            <Text style={s.btnDarkText}>Marquer comme terminée</Text>
+            <Text style={s.btnDarkText}>Terminer la prestation</Text>
           </Pressable>
         )}
 
@@ -274,6 +362,28 @@ export default function BookingDetail() {
           >
             <Text style={s.cancelText}>Annuler la réservation</Text>
           </Pressable>
+        )}
+
+        {/* Preuves de fin de mission (photos + signature) */}
+        {b.status === 'COMPLETED' && ((b.proofPhotos?.length ?? 0) > 0 || !!b.signature) && (
+          <View style={s.proofBox}>
+            <Text style={s.proofTitle}>Fin de mission</Text>
+            {(b.proofPhotos?.length ?? 0) > 0 && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.proofRow}>
+                {b.proofPhotos!.map((url) => (
+                  <Image key={url} source={{ uri: url }} style={s.proofImg} accessibilityLabel="Photo de fin de mission" />
+                ))}
+              </ScrollView>
+            )}
+            {!!b.signature && (
+              <>
+                <Text style={s.proofLabel}>
+                  Signé par le client{b.signedAt ? ` le ${formatDate(b.signedAt)}` : ''}
+                </Text>
+                <SignatureView json={b.signature} height={110} />
+              </>
+            )}
+          </View>
         )}
 
         {/* Avis client après prestation terminée */}
@@ -313,6 +423,46 @@ export default function BookingDetail() {
           </View>
         )}
       </ScrollView>
+
+      {/* Fin de mission : photos + signature du client, sur l'appareil du prestataire */}
+      <Modal visible={finishOpen} animationType="slide" transparent onRequestClose={() => setFinishOpen(false)}>
+        <View style={s.modalWrap}>
+          <View style={s.modalCard}>
+            <Text style={s.modalTitle}>Fin de mission</Text>
+            <Text style={s.modalSub}>Ajoutez des photos du travail réalisé (optionnel), puis faites signer votre client.</Text>
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.proofRow}>
+              {proofPhotos.map((url) => (
+                <Image key={url} source={{ uri: url }} style={s.proofImg} />
+              ))}
+              <Pressable
+                style={s.proofAdd}
+                onPress={addProofPhoto}
+                disabled={addingPhoto}
+                accessibilityRole="button"
+                accessibilityLabel="Ajouter une photo de fin de mission"
+              >
+                {addingPhoto ? <ActivityIndicator color={colors.link} /> : <ImagePlus size={22} color={colors.faint} />}
+              </Pressable>
+            </ScrollView>
+
+            <Text style={s.proofLabel}>Signature du client</Text>
+            <SignaturePad onChange={setSignature} />
+
+            <Pressable style={[s.btnDarkFull, busy && { opacity: 0.6 }]} disabled={busy} onPress={finishMission}>
+              {busy ? <ActivityIndicator color="#fff" /> : (
+                <>
+                  <Check size={17} color="#fff" />
+                  <Text style={s.btnDarkText}>Valider la fin de mission</Text>
+                </>
+              )}
+            </Pressable>
+            <Pressable onPress={() => setFinishOpen(false)} hitSlop={8}>
+              <Text style={s.modalBack}>Retour</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -375,4 +525,19 @@ const s = StyleSheet.create({
 
   thanks: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 16, paddingVertical: 14, borderRadius: 14, backgroundColor: colors.okBg },
   thanksText: { fontFamily: font.semi, fontSize: 15, color: colors.okText },
+
+  skipLink: { fontFamily: font.medium, fontSize: 13, color: colors.muted, textAlign: 'center', marginTop: 10, textDecorationLine: 'underline' },
+
+  proofBox: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 16, padding: 14, marginTop: 16 },
+  proofTitle: { fontFamily: font.displaySemi, fontSize: 16, color: colors.ink, marginBottom: 10 },
+  proofLabel: { fontFamily: font.semi, fontSize: 13, color: colors.muted, marginTop: 10, marginBottom: 8 },
+  proofRow: { gap: 10, paddingVertical: 2 },
+  proofImg: { width: 84, height: 84, borderRadius: 12, backgroundColor: colors.bg },
+  proofAdd: { width: 84, height: 84, borderRadius: 12, borderWidth: 1, borderColor: colors.line3, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
+
+  modalWrap: { flex: 1, backgroundColor: 'rgba(13,18,32,0.5)', justifyContent: 'flex-end' },
+  modalCard: { backgroundColor: colors.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 34 },
+  modalTitle: { fontFamily: font.display, fontSize: 21, color: colors.ink, letterSpacing: -0.4 },
+  modalSub: { fontFamily: font.body, fontSize: 13.5, color: colors.muted, marginTop: 6, marginBottom: 14, lineHeight: 19 },
+  modalBack: { fontFamily: font.semi, fontSize: 14, color: colors.muted, textAlign: 'center', marginTop: 14 },
 });

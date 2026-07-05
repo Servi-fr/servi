@@ -274,6 +274,19 @@ export type BookingRow = {
   prestataireId: string;
   client?: { name: string | null; email?: string | null; phone?: string | null; address?: string | null } | null;
   prestataire?: { name: string | null } | null;
+  // Cycle de vie « façon Uber » (colonnes ajoutées par booking-lifecycle.sql — peuvent être absentes)
+  phase?: 'EN_ROUTE' | 'IN_PROGRESS' | null;
+  proofPhotos?: string[] | null;
+  signature?: string | null; // JSON de traits dessinés dans l'app
+  signedAt?: string | null;
+};
+
+// Événement de la timeline d'une réservation (journal écrit par triggers).
+export type BookingEventRow = {
+  id: string;
+  type: string; // CREATED | ACCEPTED | CANCELLED | EN_ROUTE | STARTED | COMPLETED
+  meta: Record<string, unknown> | null;
+  createdAt: string;
 };
 
 export type NewBooking = {
@@ -352,17 +365,89 @@ export async function getProBookings(): Promise<BookingRow[]> {
 }
 
 export async function getBookingById(id: string): Promise<BookingRow | null> {
+  const BASE =
+    'id,service,date,duration,price,commission,status,address,notes,clientId,prestataireId,prestataire:User!Booking_prestataireId_fkey(name),client:User!Booking_clientId_fkey(name,email,phone,address)';
+  // Résilient : tente avec les colonnes de cycle de vie, repli si la migration n'est pas passée.
   try {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('Booking')
-      .select(
-        'id,service,date,duration,price,commission,status,address,notes,clientId,prestataireId,prestataire:User!Booking_prestataireId_fkey(name),client:User!Booking_clientId_fkey(name,email,phone,address)',
-      )
+      .select(`${BASE},phase,proofPhotos,signature,signedAt`)
       .eq('id', id)
       .maybeSingle();
+    if (!error && data) return data as unknown as BookingRow;
+    if (!error) return null;
+  } catch {
+    /* repli ci-dessous */
+  }
+  try {
+    const { data } = await supabase.from('Booking').select(BASE).eq('id', id).maybeSingle();
     return (data as unknown as BookingRow) ?? null;
   } catch {
     return null;
+  }
+}
+
+// Timeline de la réservation (journal d'événements, à la Uber). Vide si la
+// migration booking-lifecycle n'est pas encore passée.
+export async function getBookingTimeline(bookingId: string): Promise<BookingEventRow[]> {
+  try {
+    const { data, error } = await supabase
+      .from('BookingEvent')
+      .select('id,type,meta,createdAt')
+      .eq('bookingId', bookingId)
+      .order('createdAt', { ascending: true });
+    if (error) return [];
+    return (data as unknown as BookingEventRow[]) ?? [];
+  } catch {
+    return [];
+  }
+}
+
+// Sous-état d'exécution (prestataire) : EN_ROUTE → IN_PROGRESS.
+// Le trigger en base journalise l'événement et notifie le client.
+export async function setBookingPhase(
+  id: string,
+  phase: 'EN_ROUTE' | 'IN_PROGRESS',
+): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase.from('Booking').update({ phase, updatedAt: nowISO() }).eq('id', id);
+  return error ? { ok: false, error: error.message } : { ok: true };
+}
+
+// Fin de mission avec preuves : photos + signature du client (JSON de traits).
+export async function completeBookingWithProof(p: {
+  id: string;
+  photos: string[];
+  signature: string | null;
+}): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase
+    .from('Booking')
+    .update({
+      status: 'COMPLETED',
+      phase: null,
+      proofPhotos: p.photos,
+      signature: p.signature,
+      signedAt: p.signature ? nowISO() : null,
+      updatedAt: nowISO(),
+    })
+    .eq('id', p.id);
+  return error ? { ok: false, error: error.message } : { ok: true };
+}
+
+// Photo de preuve de fin de mission (bucket avatars, dossier de l'utilisateur).
+export async function uploadProofPhoto(uri: string, bookingId: string): Promise<{ ok: boolean; url?: string; error?: string }> {
+  const uid = await getUid();
+  if (!uid) return { ok: false, error: 'not-auth' };
+  try {
+    const arraybuffer = await fetch(uri).then((r) => r.arrayBuffer());
+    const path = `${uid}/proof_${bookingId}_${Date.now()}.jpg`;
+    const { error } = await supabase.storage
+      .from('avatars')
+      .upload(path, arraybuffer, { contentType: 'image/jpeg', upsert: true });
+    if (error) return { ok: false, error: error.message };
+    const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+    return { ok: true, url: data.publicUrl };
+  } catch (e: any) {
+    return { ok: false, error: e?.message ?? 'upload-failed' };
   }
 }
 
