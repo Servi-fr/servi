@@ -6,7 +6,7 @@ import { TrendingUp, Star, CheckCircle2, Clock, ChevronRight, ArrowUpRight, Mega
 import { colors, font } from '../../theme/colors';
 import { NotifBell } from '../../components/NotifBell';
 import { initials, commissionRate } from '../../lib/data';
-import { getProBookings, getMyProfile, getMyProviderProfile, boostMyListing, isMyListingSponsored, type BookingRow } from '../../lib/api';
+import { getProBookings, getMyManualJobs, getMyProfile, getMyProviderProfile, boostMyListing, isMyListingSponsored, type BookingRow, type ManualJobRow } from '../../lib/api';
 
 function isToday(iso: string) {
   const d = new Date(iso);
@@ -26,10 +26,13 @@ export default function ProDashboard() {
   const [hasProfile, setHasProfile] = useState<boolean | null>(null);
   const [plan, setPlan] = useState<string>('FREE');
 
+  const [jobs, setJobs] = useState<ManualJobRow[]>([]);
+
   useFocusEffect(
     useCallback(() => {
       let active = true;
       getProBookings().then((b) => active && setBookings(b));
+      getMyManualJobs().then((j) => active && setJobs(j));
       getMyProfile().then((p) => {
         if (!active || !p) return;
         if (p.name) setName(p.name);
@@ -47,7 +50,11 @@ export default function ProDashboard() {
   const pendingCount = bk.filter((b) => b.status === 'PENDING').length;
   const missions = bk.length;
   const rate = commissionRate(plan);
-  const revenue = Math.round(bk.filter((b) => b.status === 'COMPLETED').reduce((s, b) => s + b.price * (1 - rate), 0));
+  // Revenus nets : SERVI après commission + missions perso terminées à 100 % (aucune commission).
+  const revenue = Math.round(
+    bk.filter((b) => b.status === 'COMPLETED').reduce((s, b) => s + b.price * (1 - rate), 0) +
+      jobs.filter((j) => j.status === 'DONE').reduce((s, j) => s + j.price, 0),
+  );
 
   // Mission active : en cours d'exécution (phase posée), sinon la prochaine confirmée du jour.
   const activeMission =
@@ -61,9 +68,14 @@ export default function ProDashboard() {
   const missionLabel = activeMission
     ? PHASE_LABEL[activeMission.phase ?? ''] ?? `Aujourd'hui à ${hhmm(activeMission.date)} — à démarrer`
     : '';
-  const today: { time: string; client: string; service: string }[] = bk
-    .filter((b) => b.status !== 'CANCELLED' && isToday(b.date))
-    .map((b) => ({ time: hhmm(b.date), client: b.client?.name ?? 'Client', service: b.service }));
+  const today: { time: string; client: string; service: string }[] = [
+    ...bk
+      .filter((b) => b.status !== 'CANCELLED' && isToday(b.date))
+      .map((b) => ({ time: hhmm(b.date), client: b.client?.name ?? 'Client', service: b.service })),
+    ...jobs
+      .filter((j) => j.status === 'PLANNED' && isToday(j.date))
+      .map((j) => ({ time: hhmm(j.date), client: j.clientName, service: `${j.service} · perso` })),
+  ].sort((a, b) => a.time.localeCompare(b.time));
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>

@@ -93,6 +93,15 @@ export default function Premium() {
               ))}
             </View>
 
+            {isPro && !alreadySubscribed && (
+              <View style={s.betaBox}>
+                <Text style={s.betaText}>
+                  🎁 Pendant la bêta, les fonctionnalités Pro (factures, missions perso, mise en avant…) sont
+                  offertes : essayez tout, librement. Seule la commission réduite nécessitera l'abonnement.
+                </Text>
+              </View>
+            )}
+
             {alreadySubscribed ? (
               <View style={s.activeBox}>
                 <BadgeCheck size={18} color={colors.okText} />
@@ -136,6 +145,8 @@ const s = StyleSheet.create({
   cta: { backgroundColor: colors.blue, borderRadius: 15, paddingVertical: 17, alignItems: 'center', marginTop: 20 },
   ctaOff: { backgroundColor: colors.faint },
   ctaText: { color: '#fff', fontFamily: font.semi, fontSize: 16 },
+  betaBox: { backgroundColor: colors.okBg, borderRadius: 14, padding: 14, marginTop: 18 },
+  betaText: { fontFamily: font.medium, fontSize: 13, color: colors.okText, lineHeight: 19 },
   activeBox: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.okBg, borderRadius: 14, paddingVertical: 16, marginTop: 20 },
   activeText: { fontFamily: font.semi, fontSize: 15, color: colors.okText },
   legal: { fontFamily: font.body, fontSize: 12, color: colors.muted, textAlign: 'center', marginTop: 14, lineHeight: 18 },

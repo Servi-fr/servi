@@ -282,6 +282,72 @@ export type BookingRow = {
   tipAmount?: number | null; // pourboire (100 % prestataire), écrit par le webhook Stripe
 };
 
+// Mission PERSO du prestataire (client hors SERVI) — SERVI Pro = agenda de TOUTE l'activité.
+export type ManualJobRow = {
+  id: string;
+  clientName: string;
+  clientPhone?: string | null;
+  service: string;
+  date: string;
+  durationMin: number;
+  price: number;
+  address?: string | null;
+  notes?: string | null;
+  status: 'PLANNED' | 'DONE' | 'CANCELLED';
+};
+
+export async function getMyManualJobs(): Promise<ManualJobRow[]> {
+  const uid = await getUid();
+  if (!uid) return [];
+  try {
+    const { data, error } = await supabase
+      .from('ManualJob')
+      .select('id,clientName,clientPhone,service,date,durationMin,price,address,notes,status')
+      .eq('proId', uid)
+      .order('date', { ascending: true });
+    if (error || !data) return [];
+    return data as unknown as ManualJobRow[];
+  } catch {
+    return [];
+  }
+}
+
+export async function createManualJob(j: {
+  clientName: string;
+  clientPhone?: string;
+  service: string;
+  dateISO: string;
+  durationMin: number;
+  price: number;
+  address?: string;
+  notes?: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const uid = await getUid();
+  if (!uid) return { ok: false, error: 'not-auth' };
+  const { error } = await supabase.from('ManualJob').insert({
+    proId: uid,
+    clientName: j.clientName,
+    clientPhone: j.clientPhone ?? null,
+    service: j.service,
+    date: j.dateISO,
+    durationMin: j.durationMin,
+    price: j.price,
+    address: j.address ?? null,
+    notes: j.notes ?? null,
+  });
+  return error ? { ok: false, error: error.message } : { ok: true };
+}
+
+export async function setManualJobStatus(
+  id: string,
+  status: 'DONE' | 'CANCELLED',
+): Promise<{ ok: boolean; error?: string }> {
+  const { data, error } = await supabase.from('ManualJob').update({ status }).eq('id', id).select('id');
+  if (error) return { ok: false, error: error.message };
+  if (!data?.length) return { ok: false, error: 'session-expiree' };
+  return { ok: true };
+}
+
 // Événement de la timeline d'une réservation (journal écrit par triggers).
 export type BookingEventRow = {
   id: string;
