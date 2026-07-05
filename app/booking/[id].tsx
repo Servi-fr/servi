@@ -29,6 +29,8 @@ import {
   type BookingEventRow,
 } from '../../lib/api';
 import { generateBillingPdf } from '../../lib/invoice';
+import { payTip } from '../../lib/payments';
+import { config } from '../../lib/config';
 
 export default function BookingDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -50,6 +52,7 @@ export default function BookingDetail() {
   const [proofPhotos, setProofPhotos] = useState<string[]>([]);
   const [addingPhoto, setAddingPhoto] = useState(false);
   const [signature, setSignature] = useState<string | null>(null);
+  const [tipping, setTipping] = useState(false);
 
   async function load() {
     const [bk, u, ev] = await Promise.all([getBookingById(id), getUid(), getBookingTimeline(id)]);
@@ -244,6 +247,21 @@ export default function BookingDetail() {
     else Alert.alert('Photo', "La photo n'a pas pu être envoyée.");
   }
 
+  // Pourboire (client, après mission) : 100 % pour le prestataire.
+  async function sendTip(amount: number) {
+    if (!b || tipping) return;
+    setTipping(true);
+    const r = await payTip(b.id, amount);
+    setTipping(false);
+    if (!r.ok) {
+      if (r.error) Alert.alert('Pourboire', `Le paiement n'a pas abouti.\n\n(${r.error})`);
+      return; // annulation utilisateur : silencieux
+    }
+    Alert.alert('Merci 💝', `Votre pourboire de ${amount} € a été envoyé — il revient à 100 % à ${otherName?.split(' ')[0] ?? 'votre prestataire'}.`);
+    // Le webhook Stripe enregistre le pourboire côté serveur → petit délai avant refresh.
+    setTimeout(() => load(), 4000);
+  }
+
   async function finishMission() {
     if (!b || busy) return;
     const doFinish = async () => {
@@ -431,6 +449,37 @@ export default function BookingDetail() {
           </View>
         )}
 
+        {/* Pourboire (client) — optionnel, jamais culpabilisant, 100 % prestataire */}
+        {amClient && b.status === 'COMPLETED' && config.paymentsEnabled && !b.tipAmount && (
+          <View style={s.tipBox}>
+            <Text style={s.tipTitle}>Un pourboire, si jamais 💝</Text>
+            <Text style={s.tipSub}>
+              Optionnel — il revient à 100 % à {otherName?.split(' ')[0] ?? 'votre prestataire'}, sans commission.
+            </Text>
+            <View style={s.tipRow}>
+              {[2, 5, 10].map((amount) => (
+                <Pressable
+                  key={amount}
+                  style={[s.tipChip, tipping && { opacity: 0.5 }]}
+                  disabled={tipping}
+                  onPress={() => sendTip(amount)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Donner ${amount} euros de pourboire`}
+                >
+                  <Text style={s.tipChipText}>{amount} €</Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        )}
+        {b.status === 'COMPLETED' && !!b.tipAmount && (
+          <View style={s.tipDone}>
+            <Text style={s.tipDoneText}>
+              {amClient ? `Pourboire envoyé : ${b.tipAmount} € 💝` : `Pourboire reçu : ${b.tipAmount} € 💝`}
+            </Text>
+          </View>
+        )}
+
         {/* Avis client après prestation terminée */}
         {(amClient || amPro) && b.status === 'COMPLETED' && !reviewSent && (
           <View style={s.reviewBox}>
@@ -579,6 +628,15 @@ const s = StyleSheet.create({
   proofRow: { gap: 10, paddingVertical: 2 },
   proofImg: { width: 84, height: 84, borderRadius: 12, backgroundColor: colors.bg },
   proofAdd: { width: 84, height: 84, borderRadius: 12, borderWidth: 1, borderColor: colors.line3, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
+
+  tipBox: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 16, padding: 16, marginTop: 16 },
+  tipTitle: { fontFamily: font.displaySemi, fontSize: 16, color: colors.ink },
+  tipSub: { fontFamily: font.body, fontSize: 13, color: colors.muted, marginTop: 4, lineHeight: 19 },
+  tipRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  tipChip: { flex: 1, paddingVertical: 13, borderRadius: 13, backgroundColor: colors.chip, alignItems: 'center' },
+  tipChipText: { fontFamily: font.semi, fontSize: 15, color: colors.link },
+  tipDone: { backgroundColor: colors.okBg, borderRadius: 14, paddingVertical: 13, alignItems: 'center', marginTop: 16 },
+  tipDoneText: { fontFamily: font.semi, fontSize: 14, color: colors.okText },
 
   modalWrap: { flex: 1, backgroundColor: 'rgba(13,18,32,0.5)', justifyContent: 'flex-end' },
   modalCard: { backgroundColor: colors.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 34 },

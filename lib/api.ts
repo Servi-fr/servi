@@ -279,6 +279,7 @@ export type BookingRow = {
   proofPhotos?: string[] | null;
   signature?: string | null; // JSON de traits dessinés dans l'app
   signedAt?: string | null;
+  tipAmount?: number | null; // pourboire (100 % prestataire), écrit par le webhook Stripe
 };
 
 // Événement de la timeline d'une réservation (journal écrit par triggers).
@@ -382,7 +383,7 @@ export async function getBookingById(id: string): Promise<BookingRow | null> {
   try {
     const { data, error } = await supabase
       .from('Booking')
-      .select(`${BASE},phase,proofPhotos,signature,signedAt`)
+      .select(`${BASE},phase,proofPhotos,signature,signedAt,tipAmount`)
       .eq('id', id)
       .maybeSingle();
     if (!error && data) return data as unknown as BookingRow;

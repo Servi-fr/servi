@@ -27,10 +27,18 @@ Deno.serve(async (req) => {
 
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session;
-
-    // Cas 1 — paiement d'une réservation.
     const bookingId = session.metadata?.bookingId;
-    if (bookingId) {
+
+    // Cas 0 — POURBOIRE : on cumule sur la réservation (le trigger notifie le prestataire).
+    if (bookingId && session.metadata?.type === 'tip') {
+      const tip = Number(session.metadata?.tip ?? 0);
+      if (tip > 0) {
+        const { data: bk } = await admin.from('Booking').select('tipAmount').eq('id', bookingId).maybeSingle();
+        const total = Math.round((Number(bk?.tipAmount ?? 0) + tip) * 100) / 100;
+        await admin.from('Booking').update({ tipAmount: total, updatedAt: now }).eq('id', bookingId);
+      }
+    } else if (bookingId) {
+      // Cas 1 — paiement d'une réservation.
       await admin.from('Booking').update({ paymentStatus: 'SUCCEEDED', updatedAt: now }).eq('id', bookingId);
     }
 

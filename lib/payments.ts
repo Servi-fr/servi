@@ -18,6 +18,21 @@ export async function payForBooking(bookingId: string): Promise<{ ok: boolean; e
   }
 }
 
+// Pourboire (optionnel, après mission) : 100 % pour le prestataire, montant borné côté serveur (1–200 €).
+export async function payTip(bookingId: string, amountEur: number): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+      body: { bookingId, tip: amountEur },
+    });
+    if (error || !data?.url) return { ok: false, error: error?.message ?? data?.error ?? 'no-url' };
+    const redirectTo = makeRedirectUri({ scheme: 'serviapp', path: 'payment/return' });
+    const res = await WebBrowser.openAuthSessionAsync(data.url as string, redirectTo);
+    return { ok: res.type === 'success' };
+  } catch (e: any) {
+    return { ok: false, error: e?.message ?? 'unknown' };
+  }
+}
+
 // Démarre un abonnement (Premium client / Pro prestataire) via Stripe Billing.
 // Nécessite l'Edge Function `create-subscription` + les price IDs Stripe configurés.
 export async function startSubscription(plan: 'PREMIUM' | 'PRO'): Promise<{ ok: boolean; error?: string }> {

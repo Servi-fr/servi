@@ -563,3 +563,74 @@ drop trigger if exists trg_servi_event_updated on public."Booking";
 create trigger trg_servi_event_updated
   after update on public."Booking"
   for each row execute function public.servi_event_booking_updated();
+
+-- ▼▼▼ patch POURBOIRE (tipAmount + event TIP + notif prestataire) ▼▼▼
+alter table public."Booking" add column if not exists "tipAmount" double precision;
+-- 4) Trigger : changements de statut/phase → événements + notifications de trajet
+create or replace function public.servi_event_booking_updated()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare pro_name text; client_name text;
+begin
+  -- Événements de statut
+  begin
+    if new.status is distinct from old.status then
+      insert into public."BookingEvent" ("bookingId", type, meta)
+      values (new.id,
+        case new.status::text
+          when 'CONFIRMED' then 'ACCEPTED'
+          when 'CANCELLED' then 'CANCELLED'
+          when 'COMPLETED' then 'COMPLETED'
+          else new.status::text end,
+        case when new.status::text = 'COMPLETED'
+          then jsonb_build_object('photos', coalesce(array_length(new."proofPhotos", 1), 0), 'signed', new.signature is not null)
+          else null end);
+    end if;
+  exception when others then null;
+  end;
+
+  -- Événements de phase (trajet / arrivée / travail) + notification au client
+  begin
+    if new.phase is distinct from old.phase and new.phase is not null then
+      insert into public."BookingEvent" ("bookingId", type)
+      values (new.id, case new.phase
+        when 'EN_ROUTE' then 'EN_ROUTE'
+        when 'ARRIVED' then 'ARRIVED'
+        when 'IN_PROGRESS' then 'STARTED'
+        else new.phase end);
+
+      select coalesce(name, 'Votre prestataire') into pro_name from public."User" where id = new."prestataireId";
+      insert into public."Notification" (id, "userId", type, title, message, read, link, "createdAt", "updatedAt")
+      values (gen_random_uuid()::text, new."clientId", 'booking',
+        case new.phase
+          when 'EN_ROUTE' then 'Votre prestataire est en route 🚗'
+          when 'ARRIVED' then 'Votre prestataire est arrivé 📍'
+          else 'La prestation a commencé 🔧' end,
+        pro_name || ' — « ' || new.service || ' »',
+        false, '/booking/' || new.id, now(), now());
+    end if;
+  exception when others then null;
+  end;
+
+  -- Pourboire reçu (mis à jour par le webhook Stripe) → événement + notif au PRESTATAIRE
+  begin
+    if new."tipAmount" is distinct from old."tipAmount" and coalesce(new."tipAmount", 0) > 0 then
+      insert into public."BookingEvent" ("bookingId", type, meta)
+      values (new.id, 'TIP', jsonb_build_object('amount', new."tipAmount"));
+
+      select coalesce(name, 'Votre client') into client_name from public."User" where id = new."clientId";
+      insert into public."Notification" (id, "userId", type, title, message, read, link, "createdAt", "updatedAt")
+      values (gen_random_uuid()::text, new."prestataireId", 'booking',
+        'Pourboire reçu 💝',
+        client_name || ' vous a laissé ' || to_char(new."tipAmount", 'FM999990.00') || ' € — « ' || new.service || ' »',
+        false, '/booking/' || new.id, now(), now());
+    end if;
+  exception when others then null;
+  end;
+
+  return new;
+end; $$;
+
+drop trigger if exists trg_servi_event_updated on public."Booking";
+create trigger trg_servi_event_updated
+  after update on public."Booking"
+  for each row execute function public.servi_event_booking_updated();
