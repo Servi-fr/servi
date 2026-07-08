@@ -25,6 +25,7 @@ export default function ProDashboard() {
   const [isSpon, setIsSpon] = useState(false);
   const [hasProfile, setHasProfile] = useState<boolean | null>(null);
   const [plan, setPlan] = useState<string>('FREE');
+  const [rating, setRating] = useState<number | null>(null);
 
   const [jobs, setJobs] = useState<ManualJobRow[]>([]);
 
@@ -39,7 +40,11 @@ export default function ProDashboard() {
         if (p.plan) setPlan(p.plan);
       });
       isMyListingSponsored().then((v) => active && setIsSpon(v));
-      getMyProviderProfile().then((p) => active && setHasProfile(!!p));
+      getMyProviderProfile().then((p) => {
+        if (!active) return;
+        setHasProfile(!!p);
+        setRating(p?.rating ?? null);
+      });
       return () => {
         active = false;
       };
@@ -61,9 +66,9 @@ export default function ProDashboard() {
     bk.find((x) => x.status === 'CONFIRMED' && !!x.phase) ??
     bk.find((x) => x.status === 'CONFIRMED' && isToday(x.date));
   const PHASE_LABEL: Record<string, string> = {
-    EN_ROUTE: 'En route 🚗',
-    ARRIVED: 'Arrivé sur place 📍',
-    IN_PROGRESS: 'Travaux en cours 🔧',
+    EN_ROUTE: 'En route',
+    ARRIVED: 'Arrivé sur place',
+    IN_PROGRESS: 'Travaux en cours',
   };
   const missionLabel = activeMission
     ? PHASE_LABEL[activeMission.phase ?? ''] ?? `Aujourd'hui à ${hhmm(activeMission.date)} — à démarrer`
@@ -135,7 +140,7 @@ export default function ProDashboard() {
 
         <View style={s.kpiRow}>
           <Kpi Icon={TrendingUp} value={String(missions)} label="Missions" />
-          <Kpi Icon={Star} value="—" label="Note" />
+          <Kpi Icon={Star} value={rating ? rating.toFixed(1) : "—"} label="Note" />
           <Kpi Icon={CheckCircle2} value={String(pendingCount)} label="En attente" />
         </View>
 

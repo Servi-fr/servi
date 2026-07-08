@@ -113,7 +113,7 @@ export default function Compta() {
             <Text style={s.heroValue}>{stats.encaisse.toLocaleString('fr-FR')} €</Text>
             <Text style={s.heroSub}>
               {stats.missions} mission{stats.missions > 1 ? 's' : ''} terminée{stats.missions > 1 ? 's' : ''}
-              {stats.tips > 0 ? ` · dont ${stats.tips} € de pourboires 💝` : ''}
+              {stats.tips > 0 ? ` · dont ${stats.tips} € de pourboires` : ''}
             </Text>
           </View>
 

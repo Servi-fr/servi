@@ -53,7 +53,7 @@ begin
   if new.status is distinct from old.status then
     select coalesce(name, 'Le prestataire') into pro_name from public."User" where id = new."prestataireId";
     label := case new.status::text
-      when 'CONFIRMED' then 'acceptée ✅'
+      when 'CONFIRMED' then 'acceptée'
       when 'CANCELLED' then 'refusée / annulée'
       when 'COMPLETED' then 'terminée'
       else new.status::text end;

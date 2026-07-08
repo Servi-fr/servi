@@ -88,7 +88,7 @@ export default function Chat() {
             onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
           >
             {messages.length === 0 ? (
-              <Text style={s.hint}>Démarrez la conversation 👋</Text>
+              <Text style={s.hint}>Démarrez la conversation</Text>
             ) : (
               messages.map((m) => {
                 const mine = m.senderId === uid;

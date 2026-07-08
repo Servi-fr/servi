@@ -59,7 +59,7 @@ begin
   if new.status is distinct from old.status then
     select coalesce(name, 'Le prestataire') into pro_name from public."User" where id = new."prestataireId";
     label := case new.status::text
-      when 'CONFIRMED' then 'acceptée ✅'
+      when 'CONFIRMED' then 'acceptée'
       when 'CANCELLED' then 'refusée / annulée'
       when 'COMPLETED' then 'terminée'
       else new.status::text end;
@@ -175,7 +175,7 @@ begin
     if new.status is distinct from old.status then
       select coalesce(name, 'Le prestataire') into pro_name from public."User" where id = new."prestataireId";
       label := case new.status::text
-        when 'CONFIRMED' then 'acceptée ✅'
+        when 'CONFIRMED' then 'acceptée'
         when 'CANCELLED' then 'refusée / annulée'
         when 'COMPLETED' then 'terminée'
         else new.status::text end;
@@ -495,7 +495,7 @@ begin
       select coalesce(name, 'Votre prestataire') into pro_name from public."User" where id = new."prestataireId";
       insert into public."Notification" (id, "userId", type, title, message, read, link, "createdAt", "updatedAt")
       values (gen_random_uuid()::text, new."clientId", 'booking',
-        case new.phase when 'EN_ROUTE' then 'Votre prestataire est en route 🚗' else 'La prestation a commencé 🔧' end,
+        case new.phase when 'EN_ROUTE' then 'Votre prestataire est en route' else 'La prestation a commencé' end,
         pro_name || ' — « ' || new.service || ' »',
         false, '/booking/' || new.id, now(), now());
     end if;
@@ -547,9 +547,9 @@ begin
       insert into public."Notification" (id, "userId", type, title, message, read, link, "createdAt", "updatedAt")
       values (gen_random_uuid()::text, new."clientId", 'booking',
         case new.phase
-          when 'EN_ROUTE' then 'Votre prestataire est en route 🚗'
-          when 'ARRIVED' then 'Votre prestataire est arrivé 📍'
-          else 'La prestation a commencé 🔧' end,
+          when 'EN_ROUTE' then 'Votre prestataire est en route'
+          when 'ARRIVED' then 'Votre prestataire est arrivé'
+          else 'La prestation a commencé' end,
         pro_name || ' — « ' || new.service || ' »',
         false, '/booking/' || new.id, now(), now());
     end if;
@@ -602,9 +602,9 @@ begin
       insert into public."Notification" (id, "userId", type, title, message, read, link, "createdAt", "updatedAt")
       values (gen_random_uuid()::text, new."clientId", 'booking',
         case new.phase
-          when 'EN_ROUTE' then 'Votre prestataire est en route 🚗'
-          when 'ARRIVED' then 'Votre prestataire est arrivé 📍'
-          else 'La prestation a commencé 🔧' end,
+          when 'EN_ROUTE' then 'Votre prestataire est en route'
+          when 'ARRIVED' then 'Votre prestataire est arrivé'
+          else 'La prestation a commencé' end,
         pro_name || ' — « ' || new.service || ' »',
         false, '/booking/' || new.id, now(), now());
     end if;
@@ -620,7 +620,7 @@ begin
       select coalesce(name, 'Votre client') into client_name from public."User" where id = new."clientId";
       insert into public."Notification" (id, "userId", type, title, message, read, link, "createdAt", "updatedAt")
       values (gen_random_uuid()::text, new."prestataireId", 'booking',
-        'Pourboire reçu 💝',
+        'Pourboire reçu',
         client_name || ' vous a laissé ' || to_char(new."tipAmount", 'FM999990.00') || ' € — « ' || new.service || ' »',
         false, '/booking/' || new.id, now(), now());
     end if;

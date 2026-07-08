@@ -225,7 +225,7 @@ export default function BookingDetail() {
     await load();
     // En route + adresse connue → on propose de lancer la navigation.
     if (phase === 'EN_ROUTE' && b.address) {
-      Alert.alert('En route 🚗', 'Le client a été prévenu. Lancer le GPS vers le lieu d\'intervention ?', [
+      Alert.alert('En route', 'Le client a été prévenu. Lancer le GPS vers le lieu d\'intervention ?', [
         { text: 'Plus tard', style: 'cancel' },
         { text: 'Lancer le GPS', onPress: openGps },
       ]);
@@ -257,7 +257,7 @@ export default function BookingDetail() {
       if (r.error) Alert.alert('Pourboire', `Le paiement n'a pas abouti.\n\n(${r.error})`);
       return; // annulation utilisateur : silencieux
     }
-    Alert.alert('Merci 💝', `Votre pourboire de ${amount} € a été envoyé — il revient à 100 % à ${otherName?.split(' ')[0] ?? 'votre prestataire'}.`);
+    Alert.alert('Merci', `Votre pourboire de ${amount} € a été envoyé — il revient à 100 % à ${otherName?.split(' ')[0] ?? 'votre prestataire'}.`);
     // Le webhook Stripe enregistre le pourboire côté serveur → petit délai avant refresh.
     setTimeout(() => load(), 4000);
   }
@@ -278,7 +278,7 @@ export default function BookingDetail() {
         return;
       }
       setFinishOpen(false);
-      Alert.alert('Mission terminée 🎉', 'Le client a été prévenu. Vous pouvez générer la facture depuis cette page.');
+      Alert.alert('Mission terminée', 'Le client a été prévenu. Vous pouvez générer la facture depuis cette page.');
       await load();
     };
     if (!signature) {
@@ -452,7 +452,7 @@ export default function BookingDetail() {
         {/* Pourboire (client) — optionnel, jamais culpabilisant, 100 % prestataire */}
         {amClient && b.status === 'COMPLETED' && config.paymentsEnabled && !b.tipAmount && (
           <View style={s.tipBox}>
-            <Text style={s.tipTitle}>Un pourboire, si jamais 💝</Text>
+            <Text style={s.tipTitle}>Un pourboire, si jamais ?</Text>
             <Text style={s.tipSub}>
               Optionnel — il revient à 100 % à {otherName?.split(' ')[0] ?? 'votre prestataire'}, sans commission.
             </Text>
@@ -475,7 +475,7 @@ export default function BookingDetail() {
         {b.status === 'COMPLETED' && !!b.tipAmount && (
           <View style={s.tipDone}>
             <Text style={s.tipDoneText}>
-              {amClient ? `Pourboire envoyé : ${b.tipAmount} € 💝` : `Pourboire reçu : ${b.tipAmount} € 💝`}
+              {amClient ? `Pourboire envoyé : ${b.tipAmount} €` : `Pourboire reçu : ${b.tipAmount} €`}
             </Text>
           </View>
         )}

@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, Pressable, ScrollView, StyleSheet, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
@@ -44,13 +44,18 @@ export default function ProProfile() {
     router.replace('/sign-in');
   }
 
-  const menu: { label: string; Icon: LucideIcon; route?: string }[] = [
+  // Chaque entrée mène quelque part : pas de bouton mort.
+  const menu: { label: string; Icon: LucideIcon; route?: string; action?: () => void }[] = [
     { label: 'Passer SERVI Pro', Icon: Crown, route: '/premium' },
     { label: 'Comptabilité du mois', Icon: Wallet, route: '/compta' },
+    { label: 'Facturation', Icon: CreditCard, route: '/facturation' },
     { label: 'Mes prestations & tarifs', Icon: Briefcase, route: '/devenir-prestataire' },
     { label: 'Mon profil', Icon: Settings, route: '/profile-edit' },
-    { label: 'Paiements & virements', Icon: CreditCard },
-    { label: 'Aide & support', Icon: HelpCircle },
+    {
+      label: 'Aide & support',
+      Icon: HelpCircle,
+      action: () => Linking.openURL(`mailto:hello@whalesrecords.com?subject=${encodeURIComponent('SERVI Pro — Aide')}`),
+    },
     { label: 'Légal & confidentialité', Icon: FileText, route: '/legal' },
   ];
 
@@ -97,11 +102,11 @@ export default function ProProfile() {
         )}
 
         <View style={s.menu}>
-          {menu.map(({ label, Icon, route }, i) => (
+          {menu.map(({ label, Icon, route, action }, i) => (
             <Pressable
               key={label}
               style={[s.row, i > 0 && s.rowBorder]}
-              onPress={() => route && router.push(route)}
+              onPress={() => (action ? action() : route && router.push(route))}
             >
               <View style={s.rowIcon}>
                 <Icon size={18} color={colors.proInk} />

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>SERVI — Brief juridique (premier rendez-vous)</title>
+<style>
+  @page { size: A4; margin: 22mm 20mm; }
+  body { font-family: Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.5; color: #111827; margin: 0; }
+  h1 { font-size: 19pt; letter-spacing: -0.5px; margin: 0 0 2mm; }
+  h2 { font-size: 12.5pt; margin: 7mm 0 2.5mm; color: #111827; border-bottom: 1.5px solid #111827; padding-bottom: 1mm; }
+  h3 { font-size: 11pt; margin: 4mm 0 1.5mm; }
+  p, li { margin: 0 0 2mm; }
+  ul { margin: 0 0 2mm; padding-left: 5mm; }
+  .muted { color: #6b7280; }
+  .lead { font-size: 11.5pt; }
+  .tag { display: inline-block; background: #eef2ff; color: #2347d9; border-radius: 4px; padding: 1px 6px; font-size: 8.5pt; font-weight: bold; }
+  table { width: 100%; border-collapse: collapse; font-size: 9.5pt; margin: 2mm 0 3mm; }
+  th, td { border: 0.5pt solid #d1d5db; padding: 2mm 2.5mm; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; }
+  .kbox { background: #f8fafc; border: 0.5pt solid #e2e8f0; border-radius: 4px; padding: 3mm 4mm; margin: 2mm 0; }
+  .warn { background: #fef2f2; border-color: #fecaca; }
+  .pagebreak { page-break-before: always; }
+  .foot { font-size: 8.5pt; color: #9ca3af; margin-top: 6mm; }
+  .num { font-weight: bold; color: #2347d9; }
+</style>
+</head>
+<body>
+
+<h1>SERVI</h1>
+<p class="lead"><b>Place de marché de services à domicile</b> (ménage, jardinage, plomberie, électricité, bricolage, cours, beauté, coaching) mettant en relation des clients particuliers et des prestataires indépendants, en France.</p>
+<p class="muted">Brief préparé pour un premier rendez-vous — juillet 2026. Document de travail descriptif, préparé avec l'aide d'un assistant IA à partir de l'état réel du produit ; ne constitue pas un avis juridique. Un dossier détaillé (six pièces) est disponible sur demande.</p>
+
+<h2>1. Le produit en bref</h2>
+<p>Deux applications mobiles distinctes reliées à une même base de données, plus un site web :</p>
+<table>
+  <tr><th></th><th>SERVI (clients)</th><th>SERVI Pro (prestataires)</th></tr>
+  <tr><td><b>Fonctions</b></td>
+  <td>Recherche par métier/carte, réservation de créneaux, messagerie, suivi de mission en temps réel, avis, pourboire optionnel, estimation du crédit d'impôt services à la personne</td>
+  <td>Réception et gestion des demandes, planning, suivi de mission (en route → arrivé → travaux → fin avec <b>photos et signature du client sur l'écran</b>), devis &amp; factures (Factur-X), carnet clients, comptabilité mensuelle avec export</td></tr>
+</table>
+<p><b>Particularité importante :</b> SERVI Pro n'est pas qu'un réceptacle de demandes — c'est un <b>outil de gestion complet</b> : le prestataire peut y gérer aussi ses <b>missions et clients hors plateforme</b> (sans commission) et émettre des <b>factures pour n'importe quel client</b>. SERVI a donc un double rôle : <b>place de marché</b> + <b>éditeur de logiciel de gestion</b>.</p>
+
+<h2>2. Modèle économique (décidé et implémenté)</h2>
+<table>
+  <tr><th>Source de revenus</th><th>Montant</th><th>Payé par</th></tr>
+  <tr><td>Commission sur les prestations réservées via SERVI</td><td><b>15 %</b> (standard) / <b>10 %</b> (abonnés Pro)</td><td>Le <b>prestataire</b> (déduite de sa rémunération)</td></tr>
+  <tr><td>Abonnement « SERVI Pro »</td><td><b>19,99 €/mois</b>, sans engagement</td><td>Le prestataire (optionnel)</td></tr>
+  <tr><td>Mise en avant (« sponsorisé », étiqueté comme tel)</td><td>prévu, non facturé à ce stade</td><td>Le prestataire</td></tr>
+</table>
+<ul>
+  <li><b>Le client ne paie aucun frais</b> : il règle le prix affiché par le prestataire, rien de plus.</li>
+  <li><b>Pourboire optionnel</b> après mission (2/5/10 €) : <b>100 % reversé au prestataire</b>, aucune commission.</li>
+  <li>Aucune commission sur l'activité <b>hors plateforme</b> gérée dans l'outil.</li>
+  <li>Positionnement sous le marché (repères relevés : Wecasa ≈ 25 % côté prestataire, TaskRabbit ≈ 30 % côté client, Yoojo ≈ 15 %).</li>
+</ul>
+
+<h2>3. Circuit des fonds — le point à sécuriser en priorité</h2>
+<div class="kbox warn">
+<p><b>Fonctionnement prévu :</b> le client paie par carte via <b>Stripe</b> (page de paiement hébergée ; aucune donnée de carte chez SERVI ; montants recalculés côté serveur). Les fonds arrivent sur le compte Stripe de l'exploitant, qui doit ensuite <b>reverser au prestataire</b> sa rémunération (prix − commission). Les pourboires suivent le même canal.</p>
+<p><b>Question centrale pour le conseil :</b> qualification de cette intermédiation d'encaissement (encaissement pour compte de tiers) au regard du droit des services de paiement — agrément, statut d'agent, exemption, ou architecture <b>Stripe Connect</b> (fonds cantonnés chez Stripe, établissement agréé, commission perçue en « application fee »). <b>Aucun paiement réel n'a été encaissé : tout est en mode test Stripe, et l'exploitant n'ouvrira pas les paiements réels avant cet arbitrage.</b></p>
+</div>
+
+<h2>4. Stade et situation actuelle</h2>
+<ul>
+  <li><b>Bêta privée</b> : TestFlight (iOS) + APK de test (Android) ; dépôt Google Play en cours (test interne). Aucune exploitation commerciale, aucun flux d'argent réel.</li>
+  <li>Activité portée aujourd'hui par <b>M. Julien Marchal à titre personnel</b> (comptes développeur Apple individuel, Stripe, hébergement) ; certains identifiants techniques sont historiquement liés à son autre activité (label musical Whales Records).</li>
+  <li>Données hébergées en <b>France (Paris)</b> ; pas de traceurs publicitaires ; documents légaux in-app (CGU, confidentialité, mentions) rédigés en <b>brouillon</b>, à valider.</li>
+  <li>Factures générées au format <b>Factur-X / PDF-A-3</b> (norme EN 16931) — prêt pour la réforme de la facturation électronique (échéance d'émission micro/TPE : sept. 2027, via plateforme agréée à contractualiser).</li>
+</ul>
+
+<div class="pagebreak"></div>
+
+<h2>5. Les cinq questions du premier rendez-vous</h2>
+<p><span class="num">1.</span> <b>Forme sociale et logement de l'activité.</b> Faut-il créer une société dédiée (SASU/SAS ?) avant l'ouverture commerciale, et organiser le transfert des actifs (comptes développeurs, marque, code, base) depuis la situation personnelle actuelle ?</p>
+<p><span class="num">2.</span> <b>Circuit des fonds</b> (§3 ci-dessus). Quelle architecture retenir pour encaisser-reverser légalement (Stripe Connect / exemption / agent / agrément) ? C'est le préalable au lancement.</p>
+<p><span class="num">3.</span> <b>Statut d'opérateur de plateforme.</b> Obligations de loyauté/transparence (classement, contenus sponsorisés — déjà étiquetés), règlement DSA (signalement des avis/profils), et <b>obligations fiscales déclaratives DAC7 / art. 242 bis CGI</b> (déclaration annuelle des revenus des prestataires — les données existent déjà dans le système).</p>
+<p><span class="num">4.</span> <b>Relation avec les prestataires.</b> Sécuriser l'indépendance (ils fixent leurs tarifs, acceptent ou refusent librement, aucune exclusivité) contre tout risque de requalification ; rédiger les CGU professionnelles incluant le <b>mandat de facturation</b> — indispensable car la plateforme émet déjà les factures au nom des prestataires, y compris pour leurs clients hors plateforme.</p>
+<p><span class="num">5.</span> <b>Corpus contractuel et conso.</b> Versions définitives des CGU client/pro, CGV de l'abonnement, politique de confidentialité ; droit de rétractation sur les prestations, médiateur de la consommation, régime des pourboires ; traitement de la <b>signature électronique de fin de mission</b> (valeur probante, conservation) et du crédit d'impôt SAP (positionnement : simple estimation affichée aujourd'hui).</p>
+
+<h2>6. Données personnelles (résumé)</h2>
+<ul>
+  <li><b>Traitées :</b> identité, coordonnées, adresses d'intervention, SIRET (public), messagerie, avis, photos de fin de mission, <b>signature manuscrite numérisée</b> du client, géolocalisation ponctuelle (centrage carte), jetons de notification.</li>
+  <li><b>Non traitées :</b> données bancaires (Stripe), données de santé, mineurs, géolocalisation continue.</li>
+  <li>Hébergement <b>Paris (AWS via Supabase)</b> ; sous-traitants principaux : Supabase, Stripe, Expo (push, US), Apple/Google. Chantiers RGPD formels à mener : registre, durées de conservation, encadrement des transferts, AIPD éventuelle.</li>
+</ul>
+
+<h2>7. Identifiants utiles</h2>
+<table>
+  <tr><th>Élément</th><th>Détail</th></tr>
+  <tr><td>Éditeur (actuel)</td><td>Julien Marchal — hello@whalesrecords.com</td></tr>
+  <tr><td>Apps iOS (App Store Connect)</td><td>SERVI : id 6783919397 · SERVI Pro : id 6785066956</td></tr>
+  <tr><td>Identifiants Android</td><td>com.servi.app · com.servi.app.pro</td></tr>
+  <tr><td>Marque / logo</td><td>« SERVI » + logo — <b>non déposés à l'INPI à ce jour</b> (recherche d'antériorité à prévoir)</td></tr>
+  <tr><td>Tarifs</td><td>Commission 15 % / 10 % (Pro) · Abonnement Pro 19,99 €/mois · Client : 0 frais</td></tr>
+</table>
+
+<p class="foot">SERVI — brief juridique de premier rendez-vous · juillet 2026 · document de travail, ne constitue pas un avis juridique. Dossier détaillé disponible : présentation produit, modèle économique et flux, architecture technique et données, conformité en place, 11 chantiers à trancher, annexes.</p>
+
+</body>
+</html>

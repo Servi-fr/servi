@@ -96,7 +96,7 @@ export default function Premium() {
             {isPro && !alreadySubscribed && (
               <View style={s.betaBox}>
                 <Text style={s.betaText}>
-                  🎁 Pendant la bêta, les fonctionnalités Pro (factures, missions perso, mise en avant…) sont
+                  Pendant la bêta, les fonctionnalités Pro (factures, missions perso, mise en avant…) sont
                   offertes : essayez tout, librement. Seule la commission réduite nécessitera l'abonnement.
                 </Text>
               </View>
