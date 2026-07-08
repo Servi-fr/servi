@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { Pressable } from './motion';
 import { useRouter } from 'expo-router';
 import { colors, font } from '../theme/colors';
 import { signInWithGoogle } from '../lib/oauth';

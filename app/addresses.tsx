@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, TextInput, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { Pressable } from '../components/motion';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MapPin, Trash2, Check, Home, Plus } from 'lucide-react-native';
 import { ScreenHeader } from '../components/ScreenHeader';

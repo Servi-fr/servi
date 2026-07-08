@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Alert } from 'react-native';
+import { Pressable, FadeInUp } from '../../components/motion';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { TrendingUp, Star, CheckCircle2, Clock, ChevronRight, ArrowUpRight, Megaphone, FileText, Rocket, Navigation } from 'lucide-react-native';
@@ -85,6 +86,7 @@ export default function ProDashboard() {
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+        <FadeInUp>
         <View style={s.head}>
           <View>
             <Text style={s.hello}>Bonjour,</Text>
@@ -97,6 +99,7 @@ export default function ProDashboard() {
             </View>
           </View>
         </View>
+        </FadeInUp>
 
         {hasProfile === false && (
           <Pressable style={s.setup} onPress={() => router.push('/devenir-prestataire')}>
@@ -127,6 +130,8 @@ export default function ProDashboard() {
           </Pressable>
         )}
 
+        <FadeInUp delay={90}>
+        <View style={s.heroShell}>
         <View style={s.hero}>
           <Text style={s.heroLabel}>Revenus nets · commission {Math.round(rate * 100)} %</Text>
           <Text style={s.heroValue}>{revenue.toLocaleString('fr-FR')} €</Text>
@@ -137,12 +142,16 @@ export default function ProDashboard() {
             </Text>
           </View>
         </View>
+        </View>
+        </FadeInUp>
 
+        <FadeInUp delay={180}>
         <View style={s.kpiRow}>
           <Kpi Icon={TrendingUp} value={String(missions)} label="Missions" />
           <Kpi Icon={Star} value={rating ? rating.toFixed(1) : "—"} label="Note" />
           <Kpi Icon={CheckCircle2} value={String(pendingCount)} label="En attente" />
         </View>
+        </FadeInUp>
 
         <Pressable
           style={[s.boost, isSpon && s.boostOn]}
@@ -241,7 +250,8 @@ const s = StyleSheet.create({
   setupIcon: { width: 40, height: 40, borderRadius: 13, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' },
   setupTitle: { fontFamily: font.semi, fontSize: 15.5, color: '#fff' },
   setupSub: { fontFamily: font.body, fontSize: 12.5, color: '#aeb6c6', marginTop: 2 },
-  hero: { backgroundColor: colors.proInk, borderRadius: 22, padding: 22 },
+  heroShell: { backgroundColor: 'rgba(15,23,42,0.05)', borderRadius: 26, padding: 6, borderWidth: 1, borderColor: colors.line },
+  hero: { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.09)', backgroundColor: colors.proInk, borderRadius: 22, padding: 22 },
   heroLabel: { fontFamily: font.medium, fontSize: 13, color: '#aeb6c6' },
   heroValue: { fontFamily: font.display, fontSize: 34, color: '#fff', letterSpacing: -1, marginTop: 6 },
   heroTrend: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8 },

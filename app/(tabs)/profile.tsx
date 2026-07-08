@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Image, Linking } from 'react-native';
+import { View, Text, StyleSheet, Image, Linking } from 'react-native';
+import { Pressable } from '../../components/motion';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LogOut, CalendarDays, HelpCircle, ChevronRight, FileText, MessageCircle, Percent, MapPin, type LucideIcon } from 'lucide-react-native';

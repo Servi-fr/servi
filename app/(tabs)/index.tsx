@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, Image } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
+import { Pressable, FadeInUp } from '../../components/motion';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Search, Sparkles, ChevronRight, Star } from 'lucide-react-native';
@@ -26,26 +27,32 @@ export default function Home() {
           <NotifBell />
         </View>
 
-        <Text style={s.h1}>Le bon prestataire,{'\n'}près de chez vous.</Text>
-        <Text style={s.lead}>
-          Réservation, paiement et suivi au même endroit — avec des pros vérifiés.
-        </Text>
+        <FadeInUp>
+          <Text style={s.h1}>Le bon prestataire,{'\n'}près de chez vous.</Text>
+          <Text style={s.lead}>
+            Réservation, paiement et suivi au même endroit — avec des pros vérifiés.
+          </Text>
+        </FadeInUp>
 
-        <Pressable style={s.searchBar} onPress={() => router.push('/services')}>
-          <Search size={20} color={colors.link} />
-          <Text style={s.searchText}>Ménage, plomberie…</Text>
-        </Pressable>
+        <FadeInUp delay={90}>
+          <Pressable style={s.searchBar} onPress={() => router.push('/services')}>
+            <Search size={20} color={colors.link} />
+            <Text style={s.searchText}>Ménage, plomberie…</Text>
+          </Pressable>
+        </FadeInUp>
 
-        <Pressable style={s.needCard} onPress={() => router.push('/besoin')}>
-          <View style={s.needIcon}>
-            <Sparkles size={20} color="#fff" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={s.needTitle}>Décrivez votre besoin</Text>
-            <Text style={s.needSub}>On trouve les bons prestataires pour vous</Text>
-          </View>
-          <ChevronRight size={20} color="#fff" />
-        </Pressable>
+        <FadeInUp delay={180}>
+          <Pressable style={s.needCard} onPress={() => router.push('/besoin')}>
+            <View style={s.needIcon}>
+              <Sparkles size={20} color="#fff" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.needTitle}>Décrivez votre besoin</Text>
+              <Text style={s.needSub}>On trouve les bons prestataires pour vous</Text>
+            </View>
+            <ChevronRight size={20} color="#fff" />
+          </Pressable>
+        </FadeInUp>
 
         {sponsored.length > 0 && (
           <>

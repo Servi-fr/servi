@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Image, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Image, Alert } from 'react-native';
+import { Pressable } from '../../components/motion';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Star, MapPin, BadgeCheck, Check, Award, UserPlus } from 'lucide-react-native';

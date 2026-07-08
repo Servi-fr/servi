@@ -1,4 +1,5 @@
-import { Pressable, Text, StyleSheet } from 'react-native';
+import { Text, StyleSheet } from 'react-native';
+import { Pressable } from './motion';
 import { useRouter } from 'expo-router';
 import { Percent } from 'lucide-react-native';
 import { colors, font } from '../theme/colors';

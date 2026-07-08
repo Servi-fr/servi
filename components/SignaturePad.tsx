@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
-import { View, Text, Pressable, PanResponder, StyleSheet } from 'react-native';
+import { View, Text, PanResponder, StyleSheet } from 'react-native';
+import { Pressable } from './motion';
 import Svg, { Polyline } from 'react-native-svg';
 import { colors, font } from '../theme/colors';
 

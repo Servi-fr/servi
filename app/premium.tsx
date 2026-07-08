@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { Pressable } from '../components/motion';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Crown, Check, BadgeCheck } from 'lucide-react-native';
+import { Crown, Check, BadgeCheck, ArrowRight } from 'lucide-react-native';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { colors, font } from '../theme/colors';
 import { getMyProfile } from '../lib/api';
@@ -112,9 +113,16 @@ export default function Premium() {
                 {busy ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text style={s.ctaText}>
-                    {config.paymentsEnabled ? `Passer ${isPro ? 'Pro' : 'Premium'}` : 'Bientôt disponible'}
-                  </Text>
+                  <>
+                    <Text style={s.ctaText}>
+                      {config.paymentsEnabled ? `Passer ${isPro ? 'Pro' : 'Premium'}` : 'Bientôt disponible'}
+                    </Text>
+                    {config.paymentsEnabled && (
+                      <View style={s.ctaPastille}>
+                        <ArrowRight size={16} color="#fff" />
+                      </View>
+                    )}
+                  </>
                 )}
               </Pressable>
             )}
@@ -142,7 +150,8 @@ const s = StyleSheet.create({
   perkBorder: { borderTopWidth: 1, borderTopColor: colors.line },
   tick: { width: 26, height: 26, borderRadius: 9, backgroundColor: colors.okBg, alignItems: 'center', justifyContent: 'center' },
   perkText: { fontFamily: font.medium, fontSize: 15, color: colors.ink, flex: 1 },
-  cta: { backgroundColor: colors.blue, borderRadius: 15, paddingVertical: 17, alignItems: 'center', marginTop: 20 },
+  cta: { flexDirection: 'row', justifyContent: 'center', gap: 10, backgroundColor: colors.blue, borderRadius: 999, paddingVertical: 13, paddingLeft: 24, paddingRight: 13, alignItems: 'center', marginTop: 20 },
+  ctaPastille: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
   ctaOff: { backgroundColor: colors.faint },
   ctaText: { color: '#fff', fontFamily: font.semi, fontSize: 16 },
   betaBox: { backgroundColor: colors.okBg, borderRadius: 14, padding: 14, marginTop: 18 },

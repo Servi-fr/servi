@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Pressable, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { Pressable, FadeInUp } from '../components/motion';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
@@ -108,6 +109,7 @@ export default function Compta() {
             </Pressable>
           </View>
 
+          <View style={s.heroShell}>
           <View style={s.hero}>
             <Text style={s.heroLabel}>Encaissé (net) ce mois</Text>
             <Text style={s.heroValue}>{stats.encaisse.toLocaleString('fr-FR')} €</Text>
@@ -115,6 +117,7 @@ export default function Compta() {
               {stats.missions} mission{stats.missions > 1 ? 's' : ''} terminée{stats.missions > 1 ? 's' : ''}
               {stats.tips > 0 ? ` · dont ${stats.tips} € de pourboires` : ''}
             </Text>
+          </View>
           </View>
 
           <View style={s.grid}>
@@ -152,7 +155,8 @@ const s = StyleSheet.create({
   scroll: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 28 },
   monthRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, paddingHorizontal: 4 },
   month: { fontFamily: font.displaySemi, fontSize: 17, color: colors.proInk, textTransform: 'capitalize' },
-  hero: { backgroundColor: colors.proInk, borderRadius: 20, padding: 22, marginTop: 6 },
+  heroShell: { backgroundColor: 'rgba(15,23,42,0.05)', borderRadius: 26, padding: 6, borderWidth: 1, borderColor: colors.line, marginTop: 6 },
+  hero: { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.09)', backgroundColor: colors.proInk, borderRadius: 20, padding: 22, marginTop: 6 },
   heroLabel: { fontFamily: font.medium, fontSize: 13, color: '#aeb6c6' },
   heroValue: { fontFamily: font.display, fontSize: 34, color: '#fff', letterSpacing: -1, marginTop: 6 },
   heroSub: { fontFamily: font.body, fontSize: 13, color: '#aeb6c6', marginTop: 6 },
